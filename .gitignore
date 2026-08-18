@@ -1,0 +1,26 @@
+
+# Local tooling and machine-specific workspace files
+.languages/
+.tools/
+.graphify/
+.graphifyignore
+.npmrc
+
+# Build output and dependencies
+target/
+node_modules/
+dist/
+
+# IDE and operating-system files
+.idea/
+.vscode/
+*.iml
+Thumbs.db
+.DS_Store
+
+# Local configuration and secrets
+.env
+application-local.yml
+application-local.properties
+*.log
+*.pid

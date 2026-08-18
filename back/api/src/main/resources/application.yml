@@ -1,0 +1,60 @@
+server:
+  port: ${SERVER_PORT:8080}
+  # Completes in-flight requests before shutdown.
+  shutdown: graceful
+
+spring:
+  application:
+    name: project-backend
+
+  # Local development is used when -Dspring.profiles.active is not set.
+  profiles:
+    default: dev
+
+  # Environment-variable credentials with local development defaults. Never put
+  # real secrets in this file.
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/proyectdb}
+    username: ${DB_USERNAME:proyect}
+    password: ${DB_PASSWORD:proyect}
+    hikari:
+      pool-name: project-pool
+      maximum-pool-size: ${DB_POOL_MAX:10}
+
+  jpa:
+    # Flyway owns schema evolution. Hibernate only validates that mappings match
+    # the tables and never changes them.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    com.project.backend: INFO
+
+security:
+  authentication:
+    jwt:
+      # A Base64-encoded 64-byte minimum secret is mandatory in every environment.
+      hmac-secret: ${JWT_HMAC_SECRET:}
+      issuer: ${JWT_ISSUER:project-backend}
+      access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:PT15M}
+      refresh-token-ttl: ${JWT_REFRESH_TOKEN_TTL:P30D}

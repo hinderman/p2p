@@ -1,0 +1,18 @@
+# Perfil de desarrollo local.
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+
+management:
+  endpoint:
+    health:
+      # Detalle completo del health: util en local, nunca en produccion.
+      show-details: always
+
+logging:
+  level:
+    com.project.backend: DEBUG
+    # Descomentar para ver el SQL que genera Hibernate:
+    # org.hibernate.SQL: DEBUG

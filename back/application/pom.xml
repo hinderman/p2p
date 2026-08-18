@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.project</groupId>
+        <artifactId>backend</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>backend-application</artifactId>
+    <name>backend-application</name>
+    <description>Application layer: use cases and ports. It orchestrates the domain.</description>
+
+    <!--
+      It depends only on 'domain' and has no knowledge of Spring:
+      use cases are plain classes registered as beans
+      from the API-layer composition root. This lets application logic
+      be tested without starting a framework context.
+    -->
+    <dependencies>
+        <dependency>
+            <groupId>com.project</groupId>
+            <artifactId>backend-domain</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>

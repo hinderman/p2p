@@ -1,0 +1,19 @@
+# Production profile.
+# There are no defaults here: if an environment variable is missing, the
+# application must refuse to start rather than use local credentials.
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+management:
+  endpoint:
+    health:
+      # Do not expose internal details through public probes.
+      show-details: never
+
+logging:
+  level:
+    root: WARN
+    com.project.backend: INFO

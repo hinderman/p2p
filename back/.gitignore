@@ -1,0 +1,28 @@
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties.bak
+
+# IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+nbproject/
+
+# Sistema operativo
+Thumbs.db
+.DS_Store
+
+# Logs y temporales
+*.log
+*.pid
+
+# Configuracion local con secretos (nunca versionar)
+application-local.yml
+application-local.properties
+.env
