@@ -1,0 +1,1 @@
+export { AccessLayout } from './AccessLayout';

@@ -1,0 +1,56 @@
+.home-page {
+  max-width: 44rem;
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  border: 1px solid rgba(var(--ion-text-color-rgb), 0.08);
+  border-radius: 1.25rem;
+  background: var(--ion-card-background, #ffffff);
+}
+
+.home-page h1 {
+  margin: 0;
+  font-size: clamp(1.75rem, 7vw, 2.5rem);
+  font-weight: 730;
+  letter-spacing: -0.035em;
+}
+
+.home-page-icon {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 1.35rem;
+  border-radius: 0.9rem;
+  background: rgba(var(--ion-color-primary-rgb), 0.1);
+  color: var(--ion-color-primary);
+  font-size: 1.4rem;
+  place-items: center;
+}
+
+.home-page-eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--ion-color-primary);
+  font-size: 0.72rem;
+  font-weight: 720;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-page-description {
+  margin: 0.8rem 0 0;
+  color: var(--ion-color-medium-shade);
+  line-height: 1.6;
+}
+
+.home-page-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(var(--ion-text-color-rgb), 0.07);
+  color: var(--ion-color-medium);
+  font-size: 0.78rem;
+}
+
+.home-page-hint ion-icon {
+  color: var(--ion-color-primary);
+}

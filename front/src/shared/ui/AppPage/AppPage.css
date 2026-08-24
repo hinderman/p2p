@@ -1,0 +1,36 @@
+.app-header ion-toolbar {
+  --background: rgba(var(--ion-background-color-rgb), 0.88);
+  --border-color: rgba(var(--ion-text-color-rgb), 0.08);
+  --min-height: 3.75rem;
+  backdrop-filter: blur(1rem);
+}
+
+.app-header ion-title {
+  font-size: 1rem;
+  font-weight: 680;
+  letter-spacing: -0.01em;
+}
+
+.app-page-content {
+  --background: #f5f7fb;
+}
+
+.app-page-body {
+  width: min(100%, 76rem);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 48rem) {
+  .app-page-body {
+    padding-bottom: 2.25rem;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .app-page-content {
+    --background: #10151e;
+  }
+}

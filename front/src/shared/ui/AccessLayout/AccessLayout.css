@@ -1,0 +1,82 @@
+.access-content {
+  --background: #f4f7fb;
+}
+
+.access-shell {
+  display: grid;
+  min-height: 100%;
+  padding: max(1.25rem, env(safe-area-inset-top)) 1.25rem
+    max(1.25rem, env(safe-area-inset-bottom));
+  place-items: center;
+}
+
+.access-card {
+  width: min(100%, 27rem);
+  padding: clamp(1.5rem, 5vw, 2.25rem);
+  border: 1px solid rgba(32, 54, 86, 0.09);
+  border-radius: 1.5rem;
+  background: var(--ion-card-background, #ffffff);
+  box-shadow: 0 1.5rem 4rem rgba(31, 50, 79, 0.1);
+}
+
+.access-brand {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 1.5rem;
+  border-radius: 0.9rem;
+  background: rgba(var(--ion-color-primary-rgb), 0.1);
+  color: var(--ion-color-primary);
+  font-size: 1.45rem;
+  place-items: center;
+}
+
+.access-heading {
+  margin-bottom: 1.75rem;
+}
+
+.access-eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--ion-color-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.access-heading h1 {
+  margin: 0;
+  color: var(--ion-text-color);
+  font-size: clamp(1.8rem, 7vw, 2.25rem);
+  font-weight: 720;
+  letter-spacing: -0.035em;
+}
+
+.access-heading p:last-child {
+  margin: 0.7rem 0 0;
+  color: var(--ion-color-medium-shade);
+  line-height: 1.55;
+}
+
+@media (max-width: 30rem) {
+  .access-content {
+    --background: var(--ion-card-background, #ffffff);
+  }
+
+  .access-card {
+    padding-inline: 0.25rem;
+    border: 0;
+    box-shadow: none;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .access-content {
+    --background: #10151e;
+  }
+
+  .access-card {
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.28);
+  }
+}

@@ -1,0 +1,11 @@
+.session-loading {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+}
+
+.session-loading ion-spinner {
+  width: 2rem;
+  height: 2rem;
+  color: var(--ion-color-primary);
+}

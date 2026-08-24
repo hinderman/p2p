@@ -1,0 +1,402 @@
+.loans-page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.loans-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.loans-heading p {
+  margin: 0 0 0.35rem;
+  color: var(--ion-color-primary);
+  font-size: 0.7rem;
+  font-weight: 730;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.loans-heading h1 {
+  margin: 0;
+  font-size: clamp(1.65rem, 5vw, 2.25rem);
+  letter-spacing: -0.035em;
+}
+
+.loans-heading > div > span {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--ion-color-medium-shade);
+  line-height: 1.5;
+}
+
+.loans-heading-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.loans-heading-actions ion-button {
+  --border-radius: 0.75rem;
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-transform: none;
+}
+
+.loan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem;
+  transition: opacity 160ms ease;
+}
+
+.loan-grid.refreshing {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.loan-card {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+  padding: 1.25rem;
+  border: 1px solid rgba(var(--ion-text-color-rgb), 0.08);
+  border-radius: 1rem;
+  background: var(--ion-card-background, #ffffff);
+  box-shadow: 0 0.35rem 1.4rem rgba(31, 49, 77, 0.045);
+}
+
+.loan-card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.loan-status {
+  overflow: hidden;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(var(--ion-color-medium-rgb), 0.12);
+  color: var(--ion-color-medium-shade);
+  font-size: 0.65rem;
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loan-status.status-active,
+.loan-status.status-completed {
+  background: rgba(var(--ion-color-success-rgb), 0.12);
+  color: var(--ion-color-success-shade);
+}
+
+.loan-status.status-pending-acceptance,
+.loan-status.status-draft {
+  background: rgba(var(--ion-color-warning-rgb), 0.16);
+  color: var(--ion-color-warning-shade);
+}
+
+.loan-status.status-defaulted,
+.loan-status.status-cancelled {
+  background: rgba(var(--ion-color-danger-rgb), 0.11);
+  color: var(--ion-color-danger-shade);
+}
+
+.loan-id {
+  overflow: hidden;
+  color: var(--ion-color-medium);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.65rem;
+  text-overflow: ellipsis;
+}
+
+.loan-card-balance span,
+.loan-card-balance strong {
+  display: block;
+}
+
+.loan-card-balance span {
+  margin-bottom: 0.35rem;
+  color: var(--ion-color-medium);
+  font-size: 0.7rem;
+  font-weight: 620;
+}
+
+.loan-card-balance strong {
+  overflow-wrap: anywhere;
+  font-size: clamp(1.3rem, 6vw, 1.7rem);
+  letter-spacing: -0.025em;
+}
+
+.loan-card-details {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(var(--ion-text-color-rgb), 0.07);
+}
+
+.loan-card-details div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.loan-card-details dt,
+.loan-card-details dd {
+  margin: 0;
+  font-size: 0.72rem;
+}
+
+.loan-card-details dt {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ion-color-medium);
+}
+
+.loan-card-details dd {
+  overflow: hidden;
+  color: var(--ion-text-color);
+  font-weight: 640;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loan-card-skeleton {
+  min-height: 15rem;
+}
+
+.loan-card-skeleton ion-skeleton-text {
+  margin: 0;
+  border-radius: 0.35rem;
+}
+
+.loan-state {
+  display: grid;
+  max-width: 36rem;
+  justify-items: center;
+  margin: 1rem auto;
+  padding: clamp(2rem, 8vw, 3.5rem);
+  text-align: center;
+}
+
+.loan-state > ion-icon {
+  padding: 0.8rem;
+  border-radius: 0.85rem;
+  background: rgba(var(--ion-color-primary-rgb), 0.1);
+  color: var(--ion-color-primary);
+  font-size: 1.5rem;
+}
+
+.loan-state h2 {
+  margin: 1rem 0 0.45rem;
+  font-size: 1.25rem;
+}
+
+.loan-state p {
+  margin: 0 0 1.15rem;
+  color: var(--ion-color-medium-shade);
+  line-height: 1.55;
+}
+
+.loan-inline-error,
+.loan-time-zone,
+.loan-form-error {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border-radius: 0.7rem;
+  font-size: 0.76rem;
+}
+
+.loan-inline-error {
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  background: rgba(var(--ion-color-danger-rgb), 0.08);
+  color: var(--ion-color-danger-shade);
+}
+
+.loan-inline-error button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.create-loan-modal {
+  --width: min(66rem, calc(100% - 2rem));
+  --height: min(52rem, calc(100% - 2rem));
+  --border-radius: 1rem;
+}
+
+.create-loan-modal ion-toolbar {
+  --border-color: rgba(var(--ion-text-color-rgb), 0.08);
+}
+
+.create-loan-form {
+  display: grid;
+  gap: 2rem;
+  width: min(100%, 61rem);
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.create-loan-form section {
+  display: grid;
+  gap: 1rem;
+}
+
+.loan-form-section-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.loan-form-section-heading > span {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: rgba(var(--ion-color-primary-rgb), 0.1);
+  color: var(--ion-color-primary);
+  font-size: 0.72rem;
+  font-weight: 750;
+  place-items: center;
+}
+
+.loan-form-section-heading h2,
+.loan-form-section-heading p {
+  margin: 0;
+}
+
+.loan-form-section-heading h2 {
+  font-size: 1rem;
+}
+
+.loan-form-section-heading p {
+  margin-top: 0.2rem;
+  color: var(--ion-color-medium);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.loan-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.loan-form-grid.three-columns {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.loan-form-money {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 6.5rem;
+  gap: 0.65rem;
+}
+
+.create-loan-form ion-input,
+.create-loan-form ion-select {
+  --border-radius: 0.7rem;
+  font-size: 0.84rem;
+}
+
+.loan-time-zone {
+  padding: 0.7rem 0.85rem;
+  background: rgba(var(--ion-color-primary-rgb), 0.07);
+  color: var(--ion-color-medium-shade);
+}
+
+.loan-time-zone ion-icon {
+  flex: 0 0 auto;
+  color: var(--ion-color-primary);
+  font-size: 1rem;
+}
+
+.loan-form-error {
+  padding: 0.85rem;
+  background: rgba(var(--ion-color-danger-rgb), 0.09);
+  color: var(--ion-color-danger-shade);
+}
+
+.loan-form-error ion-icon {
+  flex: 0 0 auto;
+  font-size: 1.1rem;
+}
+
+.loan-form-actions {
+  position: sticky;
+  z-index: 2;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 0;
+  background: var(--ion-background-color);
+}
+
+.loan-form-actions ion-button {
+  --border-radius: 0.7rem;
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-transform: none;
+}
+
+.loan-form-actions ion-spinner {
+  width: 1rem;
+  margin-right: 0.5rem;
+}
+
+@media (max-width: 47.99rem) {
+  .loans-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .loans-heading-actions {
+    justify-content: flex-end;
+  }
+
+  .loans-heading-actions ion-button:last-child {
+    flex: 1;
+  }
+
+  .create-loan-modal {
+    --width: 100%;
+    --height: 100%;
+    --border-radius: 0;
+  }
+
+  .create-loan-form {
+    gap: 1.65rem;
+    padding: 1.15rem;
+  }
+
+  .loan-form-grid,
+  .loan-form-grid.three-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .loan-form-actions {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .loan-card {
+    box-shadow: 0 0.35rem 1.4rem rgba(0, 0, 0, 0.14);
+  }
+}
