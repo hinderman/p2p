@@ -1,6 +1,7 @@
 package com.project.backend.application.command;
 
 import com.project.backend.application.dto.LoanCreated;
+import com.project.backend.application.dto.InvitationEmailMessage;
 import com.project.backend.application.port.in.command.CommandHandler;
 import com.project.backend.application.port.out.UuidGeneratorPort;
 import com.project.backend.application.port.out.LoanInvitationPort;
@@ -82,7 +83,9 @@ public final class CreateLoanHandler implements CommandHandler<CreateLoanCommand
             Loan loan = Loan.create(
                     new LoanId(uuids.nextUuid()), lender.personId(), payer.id(), terms, now);
             loans.save(loan);
-            invitations.scheduleInvitation(loan.id(), terms.id(), command.payerEmail());
+            var invitation = invitations.scheduleInvitation(loan.id(), terms.id(), command.payerEmail(), now);
+            outbox.enqueueInvitationEmail(new InvitationEmailMessage(
+                    invitation.invitationId(), invitation.recipientEmail(), invitation.rawToken()), now);
             persistEvents(loan.domainEvents(), loan);
             return new LoanCreated(loan.id(), loan.status());
         });

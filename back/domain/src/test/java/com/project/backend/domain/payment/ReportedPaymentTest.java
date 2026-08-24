@@ -58,10 +58,24 @@ class ReportedPaymentTest {
                 Instant.now()));
     }
 
+    @Test
+    void prevents_duplicate_allocations_to_the_same_installment_component() {
+        ReportedPayment payment = payment(PaymentType.INSTALLMENT, dinero("100.0000"));
+        payment.attachProof(proof());
+        payment.submitForReview(Instant.now());
+        InstallmentId installmentId = new InstallmentId(UUID.randomUUID());
+
+        assertThrows(DomainRuleViolation.class, () -> payment.approve(
+                account(), dinero("100.0000"), List.of(
+                        new PaymentAllocation(installmentId, PaymentAllocationType.INTEREST, dinero("20.0000")),
+                        new PaymentAllocation(installmentId, PaymentAllocationType.INTEREST, dinero("80.0000"))),
+                Instant.now()));
+    }
+
     private static ReportedPayment payment(PaymentType type, Money amount) {
         return ReportedPayment.create(
                 new ReportedPaymentId(UUID.randomUUID()), new LoanId(UUID.randomUUID()), new PersonId(UUID.randomUUID()),
-                account(), type, amount, LocalDate.of(2026, 8, 18), "BANCO-001", Instant.now());
+                account(), type, amount, LocalDate.of(2026, 8, 18), "BANCO-001", UUID.randomUUID(), Instant.now());
     }
 
     private static PaymentProof proof() {

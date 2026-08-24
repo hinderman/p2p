@@ -38,6 +38,18 @@ public final class JdbcReportedPaymentRepository implements ReportedPaymentRepos
     }
 
     @Override
+    public Optional<ReportedPayment> findByIdForUpdate(ReportedPaymentId id) {
+        return findPayments("SELECT payment.*, loan.currency_code FROM loans.reported_payments payment JOIN loans.loans loan ON loan.loan_id = payment.loan_id WHERE payment.reported_payment_id = ? FOR UPDATE", id.value())
+                .stream().findFirst();
+    }
+
+    @Override
+    public Optional<ReportedPayment> findByIdempotencyKey(UUID idempotencyKey) {
+        return findPayments("SELECT payment.*, loan.currency_code FROM loans.reported_payments payment JOIN loans.loans loan ON loan.loan_id = payment.loan_id WHERE payment.idempotency_key = ?", idempotencyKey)
+                .stream().findFirst();
+    }
+
+    @Override
     public List<ReportedPayment> findByLoanAndStatus(LoanId loanId, ReportedPaymentStatus status) {
         return findPayments("""
                 SELECT payment.*, loan.currency_code FROM loans.reported_payments payment
@@ -55,16 +67,21 @@ public final class JdbcReportedPaymentRepository implements ReportedPaymentRepos
                 WHERE reported_payment_id = ?
                 """, payment.status().name(), now, payment.id().value());
         if (updated == 0) {
-            jdbcTemplate.update("""
+            int inserted = jdbcTemplate.update("""
                     INSERT INTO loans.reported_payments
                     (reported_payment_id, loan_id, payer_person_id, reported_by_user_account_id, payment_type,
                      reported_amount, reported_payment_date, external_reference, idempotency_key, status,
                      submitted_at, updated_at, version)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                    ON CONFLICT (idempotency_key) DO NOTHING
                     """, payment.id().value(), payment.loanId().value(), payment.payerPersonId().value(),
                     payment.reportingAccountId().value(), payment.type().name(), payment.reportedAmount().amount(),
-                    payment.reportedPaymentDate(), payment.externalReference(), UUID.randomUUID(), payment.status().name(),
+                    payment.reportedPaymentDate(), payment.externalReference(), payment.idempotencyKey(), payment.status().name(),
                     payment.createdAt(), now);
+            if (inserted == 0) {
+                return findByIdempotencyKey(payment.idempotencyKey())
+                        .orElseThrow(() -> new IllegalStateException("The conflicting idempotent payment could not be loaded"));
+            }
         }
         persistEvidence(payment);
         persistAllocations(payment, now);
@@ -100,6 +117,7 @@ public final class JdbcReportedPaymentRepository implements ReportedPaymentRepos
                     PaymentType.valueOf(resultSet.getString("payment_type")),
                     money(resultSet.getBigDecimal("reported_amount"), currency),
                     resultSet.getObject("reported_payment_date", LocalDate.class), resultSet.getString("external_reference"),
+                    resultSet.getObject("idempotency_key", UUID.class),
                     status, resultSet.getObject("submitted_at", Instant.class), findProofs(paymentId),
                     findAllocations(paymentId, currency), review.validatedAmount(), review.rejectionReason(),
                     findReversalReason(paymentId));
@@ -125,7 +143,8 @@ public final class JdbcReportedPaymentRepository implements ReportedPaymentRepos
     }
 
     private ReviewData findReview(UUID paymentId, ReportedPaymentStatus status, String currency) {
-        if (status != ReportedPaymentStatus.APPROVED && status != ReportedPaymentStatus.REJECTED) {
+        if (status != ReportedPaymentStatus.APPROVED && status != ReportedPaymentStatus.REJECTED
+                && status != ReportedPaymentStatus.REVERSED) {
             return new ReviewData(null, null);
         }
         List<ReviewData> reviews = jdbcTemplate.query("""

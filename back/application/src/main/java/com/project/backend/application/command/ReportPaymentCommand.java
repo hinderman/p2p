@@ -10,6 +10,7 @@ import com.project.backend.domain.valueobject.LoanId;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 public record ReportPaymentCommand(
         UserAccountId payerAccountId,
@@ -18,6 +19,7 @@ public record ReportPaymentCommand(
         Money reportedAmount,
         LocalDate reportedPaymentDate,
         String externalReference,
+        UUID idempotencyKey,
         List<PaymentProof> proofs) implements Command {
     public ReportPaymentCommand {
         Objects.requireNonNull(payerAccountId, "The payer account is required");
@@ -25,6 +27,7 @@ public record ReportPaymentCommand(
         Objects.requireNonNull(paymentType, "El type de payment es obligatorio");
         Objects.requireNonNull(reportedAmount, "El amount es obligatorio");
         Objects.requireNonNull(reportedPaymentDate, "La fecha de payment es obligatoria");
+        Objects.requireNonNull(idempotencyKey, "La clave de idempotencia es obligatoria");
         proofs = List.copyOf(Objects.requireNonNull(proofs, "Los proofs son obligatorios"));
     }
 }

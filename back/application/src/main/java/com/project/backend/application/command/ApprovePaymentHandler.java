@@ -7,8 +7,11 @@ import com.project.backend.application.port.out.UuidGeneratorPort;
 import com.project.backend.application.port.out.OutboxEventsPort;
 import com.project.backend.application.port.out.ClockPort;
 import com.project.backend.application.port.out.UnitOfWorkPort;
+import com.project.backend.application.port.out.FinancialLedgerPort;
+import com.project.backend.application.port.out.PaymentAllocationValidationPort;
 import com.project.backend.application.security.ApplicationAuthorizer;
 import com.project.backend.domain.event.DomainEvent;
+import com.project.backend.domain.financial.FinancialJournal;
 import com.project.backend.domain.identity.UserRole;
 import com.project.backend.domain.loan.LoanTermStatus;
 import com.project.backend.domain.loan.CapitalPrepaymentPolicy;
@@ -34,6 +37,8 @@ public final class ApprovePaymentHandler implements CommandHandler<ApprovePaymen
     private final ClockPort clock;
     private final OutboxEventsPort outbox;
     private final UnitOfWorkPort unitOfWork;
+    private final FinancialLedgerPort financialLedger;
+    private final PaymentAllocationValidationPort allocationValidation;
 
     public ApprovePaymentHandler(
             ApplicationAuthorizer authorizer,
@@ -43,7 +48,9 @@ public final class ApprovePaymentHandler implements CommandHandler<ApprovePaymen
             UuidGeneratorPort uuids,
             ClockPort clock,
             OutboxEventsPort outbox,
-            UnitOfWorkPort unitOfWork) {
+            UnitOfWorkPort unitOfWork,
+            FinancialLedgerPort financialLedger,
+            PaymentAllocationValidationPort allocationValidation) {
         this.authorizer = Objects.requireNonNull(authorizer, "El authorizer es obligatorio");
         this.loans = Objects.requireNonNull(loans, "The loan repository is required");
         this.payments = Objects.requireNonNull(payments, "El repositorio de payments es obligatorio");
@@ -52,26 +59,37 @@ public final class ApprovePaymentHandler implements CommandHandler<ApprovePaymen
         this.clock = Objects.requireNonNull(clock, "El clock es obligatorio");
         this.outbox = Objects.requireNonNull(outbox, "El outbox es obligatorio");
         this.unitOfWork = Objects.requireNonNull(unitOfWork, "La unidad de trabajo es obligatoria");
+        this.financialLedger = Objects.requireNonNull(financialLedger, "The financial ledger is required");
+        this.allocationValidation = Objects.requireNonNull(allocationValidation, "The allocation validation port is required");
     }
 
     @Override
     public PaymentProcessed execute(ApprovePaymentCommand command) {
         return unitOfWork.execute(() -> {
             var lender = authorizer.requireActiveAccountWithRole(command.lenderAccountId(), UserRole.LENDER);
-            ReportedPayment payment = payments.findById(command.reportedPaymentId())
+            ReportedPayment paymentSnapshot = payments.findById(command.reportedPaymentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("El payment no exists"));
+            allocationValidation.lockLoanForFinancialChange(paymentSnapshot.loanId());
+            ReportedPayment payment = payments.findByIdForUpdate(command.reportedPaymentId())
                     .orElseThrow(() -> new ResourceNotFoundException("El payment no exists"));
             Loan loan = loans.findById(payment.loanId())
                     .orElseThrow(() -> new ResourceNotFoundException("The payment loan does not exist"));
             authorizer.requireLenderOwnership(lender, loan);
+            var outstandingInstallments = shouldRecalculatePlan(loan, payment)
+                    ? allocationValidation.outstandingCurrentInstallments(loan)
+                    : List.<com.project.backend.domain.loan.OutstandingInstallmentBalance>of();
             Instant now = clock.now();
             payment.approve(lender.id(), command.validatedAmount(), command.allocations(), now);
+            allocationValidation.validateApproval(loan, payment);
 
             if (shouldRecalculatePlan(loan, payment)) {
-                var newPaymentPlan = paymentPlanGenerator.recalculateAfterCapitalPrepayment(new PaymentPlanId(uuids.nextUuid()), loan, payment, now);
+                var newPaymentPlan = paymentPlanGenerator.recalculateAfterCapitalPrepayment(
+                        new PaymentPlanId(uuids.nextUuid()), loan, payment, outstandingInstallments, now);
                 loan.replacePlanAfterCapitalPrepayment(newPaymentPlan, now);
                 loans.save(loan);
             }
             payments.save(payment);
+            financialLedger.record(FinancialJournal.approvalFor(payment), now);
             List<DomainEvent> domainEvents = new ArrayList<>(payment.domainEvents());
             domainEvents.addAll(loan.domainEvents());
             outbox.enqueue(domainEvents);

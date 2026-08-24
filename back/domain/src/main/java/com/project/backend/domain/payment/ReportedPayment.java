@@ -15,8 +15,11 @@ import com.project.backend.domain.valueobject.LoanId;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Aggregate for an external payment. A payment changes the debt only when the
@@ -30,6 +33,7 @@ public final class ReportedPayment extends AggregateRoot<ReportedPaymentId> {
     private final Money reportedAmount;
     private final LocalDate reportedPaymentDate;
     private final String externalReference;
+    private final UUID idempotencyKey;
     private final Instant createdAt;
     private final List<PaymentProof> proofs = new ArrayList<>();
     private List<PaymentAllocation> allocations = List.of();
@@ -47,6 +51,7 @@ public final class ReportedPayment extends AggregateRoot<ReportedPaymentId> {
             Money reportedAmount,
             LocalDate reportedPaymentDate,
             String externalReference,
+            UUID idempotencyKey,
             ReportedPaymentStatus status,
             Instant createdAt) {
         super(id);
@@ -60,6 +65,7 @@ public final class ReportedPayment extends AggregateRoot<ReportedPaymentId> {
         }
         this.reportedPaymentDate = Objects.requireNonNull(reportedPaymentDate, "The payment date is required");
         this.externalReference = externalReference == null ? null : externalReference.strip();
+        this.idempotencyKey = Objects.requireNonNull(idempotencyKey, "The idempotency key is required");
         this.status = Objects.requireNonNull(status, "The payment status is required");
         this.createdAt = Objects.requireNonNull(createdAt, "The creation time is required");
     }
@@ -73,10 +79,11 @@ public final class ReportedPayment extends AggregateRoot<ReportedPaymentId> {
             Money reportedAmount,
             LocalDate reportedPaymentDate,
             String externalReference,
+            UUID idempotencyKey,
             Instant createdAt) {
         return new ReportedPayment(
                 id, loanId, payerPersonId, reportingAccountId, type, reportedAmount,
-                reportedPaymentDate, externalReference, ReportedPaymentStatus.DRAFT, createdAt);
+                reportedPaymentDate, externalReference, idempotencyKey, ReportedPaymentStatus.DRAFT, createdAt);
     }
 
     /** Rehydrates the aggregate from persistence without producing domain events. */
@@ -89,6 +96,7 @@ public final class ReportedPayment extends AggregateRoot<ReportedPaymentId> {
             Money reportedAmount,
             LocalDate reportedPaymentDate,
             String externalReference,
+            UUID idempotencyKey,
             ReportedPaymentStatus status,
             Instant createdAt,
             List<PaymentProof> proofs,
@@ -97,7 +105,7 @@ public final class ReportedPayment extends AggregateRoot<ReportedPaymentId> {
             String rejectionReason,
             String reversalReason) {
         ReportedPayment payment = new ReportedPayment(id, loanId, payerPersonId, reportingAccountId, type,
-                reportedAmount, reportedPaymentDate, externalReference, status, createdAt);
+                reportedAmount, reportedPaymentDate, externalReference, idempotencyKey, status, createdAt);
         payment.proofs.addAll(List.copyOf(proofs));
         payment.allocations = List.copyOf(allocations);
         payment.validatedAmount = validatedAmount;
@@ -113,6 +121,7 @@ public final class ReportedPayment extends AggregateRoot<ReportedPaymentId> {
     public Money reportedAmount() { return reportedAmount; }
     public LocalDate reportedPaymentDate() { return reportedPaymentDate; }
     public String externalReference() { return externalReference; }
+    public UUID idempotencyKey() { return idempotencyKey; }
     public ReportedPaymentStatus status() { return status; }
     public Money validatedAmount() { return validatedAmount; }
     public String rejectionReason() { return rejectionReason; }
@@ -120,6 +129,28 @@ public final class ReportedPayment extends AggregateRoot<ReportedPaymentId> {
     public Instant createdAt() { return createdAt; }
     public List<PaymentProof> proofs() { return List.copyOf(proofs); }
     public List<PaymentAllocation> allocations() { return allocations; }
+
+    /**
+     * Indicates whether an idempotent retry is the same original submission.
+     * A reused key with a different payload must never silently create or
+     * return a different financial operation.
+     */
+    public boolean matchesSubmission(
+            LoanId loanId,
+            UserAccountId reportingAccountId,
+            PaymentType type,
+            Money reportedAmount,
+            LocalDate reportedPaymentDate,
+            String externalReference,
+            List<PaymentProof> proofs) {
+        return this.loanId.equals(loanId)
+                && this.reportingAccountId.equals(reportingAccountId)
+                && this.type == type
+                && this.reportedAmount.equals(reportedAmount)
+                && this.reportedPaymentDate.equals(reportedPaymentDate)
+                && Objects.equals(this.externalReference, normalizeExternalReference(externalReference))
+                && Set.copyOf(this.proofs).equals(Set.copyOf(proofs));
+    }
 
     public void attachProof(PaymentProof proof) {
         Objects.requireNonNull(proof, "Payment proof is required");
@@ -228,5 +259,20 @@ public final class ReportedPayment extends AggregateRoot<ReportedPaymentId> {
         if (type == PaymentType.INSTALLMENT && hasDirectPrincipalAllocation) {
             throw new DomainRuleViolation("An installment payment cannot include a direct principal allocation");
         }
+        Set<AllocationTarget> targets = new HashSet<>();
+        for (PaymentAllocation allocation : allocations) {
+            AllocationTarget target = new AllocationTarget(allocation.installmentId(), allocation.type());
+            if (!targets.add(target)) {
+                throw new DomainRuleViolation("A payment cannot allocate the same installment component more than once");
+            }
+        }
+    }
+
+    private static String normalizeExternalReference(String externalReference) {
+        return externalReference == null ? null : externalReference.strip();
+    }
+
+    private record AllocationTarget(com.project.backend.domain.valueobject.InstallmentId installmentId,
+                                    PaymentAllocationType type) {
     }
 }

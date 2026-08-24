@@ -7,6 +7,12 @@ spring:
   application:
     name: project-backend
 
+  # Infrastructure adapters are intentionally final and exposed through their
+  # application/domain ports. JDK proxies preserve that boundary for advised
+  # beans such as transactional authentication and repository metrics.
+  aop:
+    proxy-target-class: false
+
   # Local development is used when -Dspring.profiles.active is not set.
   profiles:
     default: dev
@@ -35,6 +41,24 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # The original schema is provisioned database-first from .database. On its
+    # first upgrade, establish version 0 and apply the additive migrations.
+    baseline-on-migrate: true
+    baseline-version: 0
+
+  # Mailpit listens here in local development. In deployed environments these
+  # values are overridden with the Brevo SMTP relay and a verified sender.
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      "mail.smtp.auth": ${MAIL_SMTP_AUTH:false}
+      "mail.smtp.starttls.enable": ${MAIL_SMTP_STARTTLS_ENABLE:false}
+      "mail.smtp.connectiontimeout": ${MAIL_SMTP_CONNECTION_TIMEOUT:5000}
+      "mail.smtp.timeout": ${MAIL_SMTP_TIMEOUT:5000}
+      "mail.smtp.writetimeout": ${MAIL_SMTP_WRITE_TIMEOUT:5000}
 
 management:
   endpoints:
@@ -50,6 +74,28 @@ logging:
   level:
     com.project.backend: INFO
 
+springdoc:
+  # API documentation is enabled only by the development profile. It must not
+  # create an additional public surface in a deployed environment.
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+app:
+  invitation:
+    email:
+      enabled: ${INVITATION_EMAIL_ENABLED:true}
+      from: ${INVITATION_EMAIL_FROM:no-reply@project.local}
+      sender-name: ${INVITATION_EMAIL_SENDER_NAME:Project}
+      # The token is in the URL fragment, so it is not sent to frontend-server logs or referrers.
+      public-base-url: ${INVITATION_PUBLIC_BASE_URL:http://localhost:5173}
+      onboarding-path: ${INVITATION_ONBOARDING_PATH:/onboarding/payer}
+      poll-delay: ${INVITATION_EMAIL_POLL_DELAY:PT5S}
+      max-attempts: ${INVITATION_EMAIL_MAX_ATTEMPTS:10}
+      # Required: Base64-encoded, randomly generated 32-byte AES-256 key.
+      outbox-encryption-key: ${INVITATION_OUTBOX_ENCRYPTION_KEY:}
+
 security:
   authentication:
     jwt:
@@ -58,3 +104,7 @@ security:
       issuer: ${JWT_ISSUER:project-backend}
       access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:PT15M}
       refresh-token-ttl: ${JWT_REFRESH_TOKEN_TTL:P30D}
+    rate-limit:
+      window: ${AUTH_RATE_LIMIT_WINDOW:PT15M}
+      max-failures-per-email: ${AUTH_RATE_LIMIT_EMAIL_FAILURES:5}
+      max-failures-per-ip: ${AUTH_RATE_LIMIT_IP_FAILURES:20}

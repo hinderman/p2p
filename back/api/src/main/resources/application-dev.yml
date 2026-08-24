@@ -16,3 +16,9 @@ logging:
     com.project.backend: DEBUG
     # Descomentar para ver el SQL que genera Hibernate:
     # org.hibernate.SQL: DEBUG
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true

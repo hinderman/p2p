@@ -18,4 +18,15 @@ class Argon2idPasswordVerifierTest {
         assertTrue(verifier.matches("correct horse battery staple".toCharArray(), hash));
         assertFalse(verifier.matches("incorrect password".toCharArray(), hash));
     }
+
+    @Test
+    void hashes_passwords_that_can_be_verified_using_the_shared_argon2id_parameters() {
+        Argon2idPasswordHasher hasher = new Argon2idPasswordHasher();
+        Argon2idPasswordVerifier verifier = new Argon2idPasswordVerifier();
+
+        PasswordHash hash = hasher.hash("correct horse battery staple".toCharArray());
+
+        assertTrue(verifier.matches("correct horse battery staple".toCharArray(), hash));
+        assertFalse(verifier.matches("incorrect password".toCharArray(), hash));
+    }
 }

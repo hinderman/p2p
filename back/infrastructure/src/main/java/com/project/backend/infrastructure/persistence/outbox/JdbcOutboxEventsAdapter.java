@@ -1,6 +1,8 @@
 package com.project.backend.infrastructure.persistence.outbox;
 
+import com.project.backend.application.dto.InvitationEmailMessage;
 import com.project.backend.application.port.out.OutboxEventsPort;
+import com.project.backend.infrastructure.notification.InvitationEmailPayloadCipher;
 import com.project.backend.domain.event.DomainEvent;
 import com.project.backend.domain.event.LoanActivated;
 import com.project.backend.domain.event.LoanCreated;
@@ -13,6 +15,7 @@ import com.project.backend.domain.event.UserAccountActivated;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,9 +23,11 @@ import java.util.UUID;
 @Component
 public final class JdbcOutboxEventsAdapter implements OutboxEventsPort {
     private final JdbcTemplate jdbcTemplate;
+    private final InvitationEmailPayloadCipher invitationPayloadCipher;
 
-    public JdbcOutboxEventsAdapter(JdbcTemplate jdbcTemplate) {
+    public JdbcOutboxEventsAdapter(JdbcTemplate jdbcTemplate, InvitationEmailPayloadCipher invitationPayloadCipher) {
         this.jdbcTemplate = jdbcTemplate;
+        this.invitationPayloadCipher = invitationPayloadCipher;
     }
 
     @Override
@@ -36,6 +41,15 @@ public final class JdbcOutboxEventsAdapter implements OutboxEventsPort {
                     """, UUID.randomUUID(), aggregate.type(), aggregate.id(), event.getClass().getSimpleName(),
                     "{\"event_type\":\"" + event.getClass().getSimpleName() + "\"}", event.occurredAt());
         }
+    }
+
+    @Override
+    public void enqueueInvitationEmail(InvitationEmailMessage invitation, Instant occurredAt) {
+        jdbcTemplate.update("""
+                INSERT INTO loans.outbox_events
+                (outbox_event_id, aggregate_type, aggregate_id, event_type, payload, occurred_at)
+                VALUES (?, 'LoanInvitation', ?, 'LoanInvitationEmailRequested', CAST(? AS jsonb), ?)
+                """, UUID.randomUUID(), invitation.invitationId().value(), invitationPayloadCipher.encrypt(invitation), occurredAt);
     }
 
     private static AggregateReference aggregateReference(DomainEvent event) {

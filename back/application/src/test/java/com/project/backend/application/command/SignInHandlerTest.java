@@ -5,6 +5,7 @@ import com.project.backend.application.exception.AuthenticationFailedException;
 import com.project.backend.application.port.out.AuthenticationTokenIssuerPort;
 import com.project.backend.application.port.out.ClockPort;
 import com.project.backend.application.port.out.PasswordVerifierPort;
+import com.project.backend.application.port.out.SignInRateLimitPort;
 import com.project.backend.domain.identity.UserAccount;
 import com.project.backend.domain.identity.UserAccountStatus;
 import com.project.backend.domain.identity.PasswordHash;
@@ -32,10 +33,11 @@ class SignInHandlerTest {
                 new FakeUserAccountRepository(account),
                 (password, hash) -> String.valueOf(password).equals("secret") && hash.value().equals("hash"),
                 emisor(),
-                () -> Instant.parse("2026-08-18T12:00:00Z"));
+                () -> Instant.parse("2026-08-18T12:00:00Z"),
+                unlimitedRateLimiter());
 
         AuthenticatedSession session = handler.execute(new SignInCommand(
-                new EmailAddress("payer@example.com"), "secret".toCharArray()));
+                new EmailAddress("payer@example.com"), "secret".toCharArray(), "127.0.0.1"));
 
         assertEquals(account.id(), session.userAccountId());
         assertEquals("access", session.accessToken());
@@ -48,10 +50,11 @@ class SignInHandlerTest {
                 new FakeUserAccountRepository(account),
                 (password, hash) -> false,
                 emisor(),
-                Instant::now);
+                Instant::now,
+                unlimitedRateLimiter());
 
         assertThrows(AuthenticationFailedException.class, () -> handler.execute(new SignInCommand(
-                new EmailAddress("payer@example.com"), "invalid".toCharArray())));
+                new EmailAddress("payer@example.com"), "invalid".toCharArray(), "127.0.0.1")));
     }
 
     private static UserAccount activeAccount() {
@@ -64,6 +67,13 @@ class SignInHandlerTest {
     private static AuthenticationTokenIssuerPort emisor() {
         return (account, issuedAt) -> new AuthenticatedSession(
                 account.id(), account.personId(), account.roles(), "access", "refresh", issuedAt.plusSeconds(900));
+    }
+
+    private static SignInRateLimitPort unlimitedRateLimiter() {
+        return new SignInRateLimitPort() {
+            @Override public void checkAllowed(EmailAddress email, String sourceIp, Instant occurredAt) { }
+            @Override public void recordAttempt(EmailAddress email, String sourceIp, boolean succeeded, Instant occurredAt) { }
+        };
     }
 
     private static final class FakeUserAccountRepository implements UserAccountRepository {
