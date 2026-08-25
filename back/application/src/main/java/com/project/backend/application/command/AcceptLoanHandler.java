@@ -46,6 +46,11 @@ public final class AcceptLoanHandler implements CommandHandler<AcceptLoanCommand
     }
 
     @Override
+    public Class<AcceptLoanCommand> requestType() {
+        return AcceptLoanCommand.class;
+    }
+
+    @Override
     public LoanAccepted execute(AcceptLoanCommand command) {
         return unitOfWork.execute(() -> {
             var payer = authorizer.requireActiveAccountWithRole(command.payerAccountId(), UserRole.PAYER);

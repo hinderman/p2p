@@ -9,9 +9,7 @@ import com.project.backend.application.command.ApprovePaymentCommand;
 import com.project.backend.application.command.RejectPaymentCommand;
 import com.project.backend.application.command.ReportPaymentCommand;
 import com.project.backend.application.command.ReversePaymentCommand;
-import com.project.backend.application.dto.PaymentProcessed;
-import com.project.backend.application.dto.PaymentRegistered;
-import com.project.backend.application.port.in.command.CommandHandler;
+import com.project.backend.application.port.in.ApplicationMediator;
 import com.project.backend.domain.valueobject.LoanId;
 import com.project.backend.domain.valueobject.ReportedPaymentId;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,22 +33,11 @@ import java.util.UUID;
 @SecurityRequirement(name = "bearerAuth")
 public class PaymentController {
     private final CurrentAccountResolver currentAccount;
-    private final CommandHandler<ReportPaymentCommand, PaymentRegistered> reportPayment;
-    private final CommandHandler<ApprovePaymentCommand, PaymentProcessed> approvePayment;
-    private final CommandHandler<RejectPaymentCommand, PaymentProcessed> rejectPayment;
-    private final CommandHandler<ReversePaymentCommand, PaymentProcessed> reversePayment;
+    private final ApplicationMediator mediator;
 
-    public PaymentController(
-            CurrentAccountResolver currentAccount,
-            CommandHandler<ReportPaymentCommand, PaymentRegistered> reportPayment,
-            CommandHandler<ApprovePaymentCommand, PaymentProcessed> approvePayment,
-            CommandHandler<RejectPaymentCommand, PaymentProcessed> rejectPayment,
-            CommandHandler<ReversePaymentCommand, PaymentProcessed> reversePayment) {
+    public PaymentController(CurrentAccountResolver currentAccount, ApplicationMediator mediator) {
         this.currentAccount = currentAccount;
-        this.reportPayment = reportPayment;
-        this.approvePayment = approvePayment;
-        this.rejectPayment = rejectPayment;
-        this.reversePayment = reversePayment;
+        this.mediator = mediator;
     }
 
     @PostMapping(path = "/loans/{loanId}/payments", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -60,28 +47,28 @@ public class PaymentController {
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody ReportPaymentRequest request,
             Principal principal) {
-        return ApiMapper.response(reportPayment.execute(ApiMapper.toCommand(
+        return ApiMapper.response(mediator.send(ApiMapper.toCommand(
                 request, new LoanId(loanId), currentAccount.requireAccountId(principal), UUID.fromString(idempotencyKey))));
     }
 
     @PostMapping(path = "/payments/{paymentId}/approval", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Approve a reported payment", description = "Requires the LENDER role and ownership of the loan.")
     public PaymentResponse approve(@PathVariable UUID paymentId, @Valid @RequestBody ApprovePaymentRequest request, Principal principal) {
-        return ApiMapper.response(approvePayment.execute(ApiMapper.toCommand(
+        return ApiMapper.response(mediator.send(ApiMapper.toCommand(
                 request, new ReportedPaymentId(paymentId), currentAccount.requireAccountId(principal))));
     }
 
     @PostMapping(path = "/payments/{paymentId}/rejection", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Reject a reported payment", description = "Requires the LENDER role and a review reason.")
     public PaymentResponse reject(@PathVariable UUID paymentId, @Valid @RequestBody ReasonRequest request, Principal principal) {
-        return ApiMapper.response(rejectPayment.execute(new RejectPaymentCommand(
+        return ApiMapper.response(mediator.send(new RejectPaymentCommand(
                 currentAccount.requireAccountId(principal), new ReportedPaymentId(paymentId), request.reason())));
     }
 
     @PostMapping(path = "/payments/{paymentId}/reversal", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Reverse an approved payment", description = "Requires the LENDER role and a reversal reason.")
     public PaymentResponse reverse(@PathVariable UUID paymentId, @Valid @RequestBody ReasonRequest request, Principal principal) {
-        return ApiMapper.response(reversePayment.execute(new ReversePaymentCommand(
+        return ApiMapper.response(mediator.send(new ReversePaymentCommand(
                 currentAccount.requireAccountId(principal), new ReportedPaymentId(paymentId), request.reason())));
     }
 }

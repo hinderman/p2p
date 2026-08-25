@@ -1,6 +1,7 @@
 package com.project.backend.application.command;
 
 import com.project.backend.application.dto.Command;
+import com.project.backend.application.dto.PaymentProcessed;
 import com.project.backend.domain.payment.PaymentAllocation;
 import com.project.backend.domain.valueobject.UserAccountId;
 import com.project.backend.domain.valueobject.Money;
@@ -13,7 +14,7 @@ public record ApprovePaymentCommand(
         UserAccountId lenderAccountId,
         ReportedPaymentId reportedPaymentId,
         Money validatedAmount,
-        List<PaymentAllocation> allocations) implements Command {
+        List<PaymentAllocation> allocations) implements Command<PaymentProcessed> {
     public ApprovePaymentCommand {
         Objects.requireNonNull(lenderAccountId, "La account lender es obligatoria");
         Objects.requireNonNull(reportedPaymentId, "El payment es obligatorio");

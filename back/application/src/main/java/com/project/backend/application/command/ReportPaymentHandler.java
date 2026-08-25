@@ -49,6 +49,11 @@ public final class ReportPaymentHandler implements CommandHandler<ReportPaymentC
     }
 
     @Override
+    public Class<ReportPaymentCommand> requestType() {
+        return ReportPaymentCommand.class;
+    }
+
+    @Override
     public PaymentRegistered execute(ReportPaymentCommand command) {
         return unitOfWork.execute(() -> {
             var payer = authorizer.requireActiveAccountWithRole(command.payerAccountId(), UserRole.PAYER);

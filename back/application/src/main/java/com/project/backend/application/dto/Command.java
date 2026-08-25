@@ -8,5 +8,5 @@ package com.project.backend.application.dto;
  * aqui los DTO HTTP de la capa api, para que un cambio en el contrato REST no
  * arrastre a los casos de uso.
  */
-public interface Command {
+public interface Command<R> extends Request<R> {
 }

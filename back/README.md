@@ -35,6 +35,42 @@ java -jar api\target\backend-api-0.0.1-SNAPSHOT.jar
 
 Health endpoint: <http://localhost:8080/actuator/health>
 
+## Tests with PostgreSQL
+
+The regular test suite does not require Docker:
+
+```powershell
+mvnw.cmd test
+```
+
+The integration profile executes the persistence tests against a real, disposable
+PostgreSQL 18 instance managed by Testcontainers:
+
+```powershell
+mvnw.cmd verify -Pintegration
+```
+
+Docker must be running for this command. The test database is isolated from the
+application database: container reuse is disabled, every test is rolled back and
+asserts that no business rows remain, and the container is stopped and removed when
+the suite finishes. The CI workflow runs this same command for backend and database
+changes.
+
+For environments without Docker, an already-created disposable PostgreSQL database
+can be used only when all four safety variables are supplied:
+
+```powershell
+$env:TEST_DATABASE_URL = "jdbc:postgresql://localhost:5433/project_it_unique_name"
+$env:TEST_DATABASE_USERNAME = "postgres"
+$env:TEST_DATABASE_PASSWORD = "postgres"
+$env:TEST_DATABASE_EPHEMERAL = "DROP_AFTER_TESTS"
+mvnw.cmd verify -Pintegration
+```
+
+The database name must start with `project_it_`. Its `loans` schema and Flyway
+history are deleted at the end, so this option must never point to a shared or
+persistent database.
+
 ## Configuration
 
 Without `spring.profiles.active`, the application uses the `dev` profile.

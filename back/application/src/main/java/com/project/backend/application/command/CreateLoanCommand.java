@@ -1,6 +1,7 @@
 package com.project.backend.application.command;
 
 import com.project.backend.application.dto.Command;
+import com.project.backend.application.dto.LoanCreated;
 import com.project.backend.domain.loan.DayCountBasis;
 import com.project.backend.domain.loan.InterestCalculationMethod;
 import com.project.backend.domain.loan.AmortizationMethod;
@@ -30,7 +31,7 @@ public record CreateLoanCommand(
         int installmentCount,
         LocalDate firstDueDate,
         ZoneId timeZone,
-        PaymentScheduleRule paymentScheduleRule) implements Command {
+        PaymentScheduleRule paymentScheduleRule) implements Command<LoanCreated> {
     public CreateLoanCommand {
         Objects.requireNonNull(lenderAccountId, "La account lender es obligatoria");
         Objects.requireNonNull(payerEmail, "El email payer es obligatorio");

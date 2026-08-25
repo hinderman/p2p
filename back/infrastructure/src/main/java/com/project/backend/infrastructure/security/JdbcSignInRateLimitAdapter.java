@@ -10,6 +10,8 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
+import static com.project.backend.infrastructure.persistence.JdbcTime.timestamp;
+
 /** PostgreSQL-backed rolling-window throttle that works consistently across application instances. */
 @Component
 public final class JdbcSignInRateLimitAdapter implements SignInRateLimitPort {
@@ -36,14 +38,14 @@ public final class JdbcSignInRateLimitAdapter implements SignInRateLimitPort {
                 INSERT INTO loans.sign_in_attempts
                 (sign_in_attempt_id, normalized_email, source_ip, succeeded, occurred_at)
                 VALUES (?, ?, CAST(? AS inet), ?, ?)
-                """, UUID.randomUUID(), email.value(), sourceIp, succeeded, occurredAt);
+                """, UUID.randomUUID(), email.value(), sourceIp, succeeded, timestamp(occurredAt));
     }
 
     private long failedAttemptsForEmail(EmailAddress email, Instant from) {
         Long count = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*) FROM loans.sign_in_attempts
                 WHERE normalized_email = ? AND succeeded = false AND occurred_at >= ?
-                """, Long.class, email.value(), from);
+                """, Long.class, email.value(), timestamp(from));
         return count == null ? 0 : count;
     }
 
@@ -51,7 +53,7 @@ public final class JdbcSignInRateLimitAdapter implements SignInRateLimitPort {
         Long count = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*) FROM loans.sign_in_attempts
                 WHERE source_ip = CAST(? AS inet) AND succeeded = false AND occurred_at >= ?
-                """, Long.class, sourceIp, from);
+                """, Long.class, sourceIp, timestamp(from));
         return count == null ? 0 : count;
     }
 }

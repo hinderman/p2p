@@ -8,6 +8,7 @@ import com.project.backend.application.dto.AuthenticatedSession;
 import com.project.backend.application.exception.RateLimitExceededException;
 import com.project.backend.application.dto.LoanCreated;
 import com.project.backend.application.dto.LoanSummary;
+import com.project.backend.application.dto.Page;
 import com.project.backend.application.dto.PaymentSummary;
 import com.project.backend.application.port.in.command.CommandHandler;
 import com.project.backend.application.port.in.query.QueryHandler;
@@ -87,7 +88,7 @@ class AuthenticationControllerTest {
         @SuppressWarnings("unchecked")
         QueryHandler<ListPayerLoansQuery, List<LoanSummary>> payerLoans = mock(QueryHandler.class);
         @SuppressWarnings("unchecked")
-        QueryHandler<ListPendingPaymentsQuery, List<PaymentSummary>> pendingPayments = mock(QueryHandler.class);
+        QueryHandler<ListPendingPaymentsQuery, Page<PaymentSummary>> pendingPayments = mock(QueryHandler.class);
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new LoanController(new CurrentAccountResolver(), createLoan,
                         lenderLoans, payerLoans, pendingPayments))
                 .setControllerAdvice(new ApiExceptionHandler()).build();

@@ -20,6 +20,11 @@ public final class ListLenderLoansHandler
     }
 
     @Override
+    public Class<ListLenderLoansQuery> requestType() {
+        return ListLenderLoansQuery.class;
+    }
+
+    @Override
     public List<LoanSummary> execute(ListLenderLoansQuery query) {
         var account = authorizer.requireActiveAccountWithRole(query.lenderAccountId(), UserRole.LENDER);
         return List.copyOf(readModel.findByLender(account.personId()));

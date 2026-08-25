@@ -64,6 +64,11 @@ public final class ApprovePaymentHandler implements CommandHandler<ApprovePaymen
     }
 
     @Override
+    public Class<ApprovePaymentCommand> requestType() {
+        return ApprovePaymentCommand.class;
+    }
+
+    @Override
     public PaymentProcessed execute(ApprovePaymentCommand command) {
         return unitOfWork.execute(() -> {
             var lender = authorizer.requireActiveAccountWithRole(command.lenderAccountId(), UserRole.LENDER);

@@ -13,6 +13,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.project.backend.infrastructure.persistence.JdbcTime.timestamp;
+import static com.project.backend.infrastructure.persistence.JdbcTime.instant;
+
 @Repository
 public final class JdbcPersonRepository implements PersonRepository {
     private final JdbcTemplate jdbcTemplate;
@@ -45,18 +48,18 @@ public final class JdbcPersonRepository implements PersonRepository {
         int updated = jdbcTemplate.update("""
                 UPDATE loans.people SET status = ?, updated_at = ?, version = version + 1
                 WHERE person_id = ?
-                """, person.status().name(), now, person.id().value());
+                """, person.status().name(), timestamp(now), person.id().value());
         if (updated == 0) {
             jdbcTemplate.update("""
                     INSERT INTO loans.people (person_id, status, created_at, updated_at, version)
                     VALUES (?, ?, ?, ?, 0)
-                    """, person.id().value(), person.status().name(), person.createdAt(), now);
+                    """, person.id().value(), person.status().name(), timestamp(person.createdAt()), timestamp(now));
             jdbcTemplate.update("""
                     INSERT INTO loans.person_emails
                     (person_email_id, person_id, original_email, normalized_email, is_primary, created_at)
                     VALUES (?, ?, ?, ?, true, ?)
                     """, UUID.randomUUID(), person.id().value(), person.primaryEmail().value(),
-                    person.primaryEmail().value(), person.createdAt());
+                    person.primaryEmail().value(), timestamp(person.createdAt()));
         }
         return person;
     }
@@ -78,7 +81,7 @@ public final class JdbcPersonRepository implements PersonRepository {
                 new PersonId(resultSet.getObject("person_id", UUID.class)),
                 new EmailAddress(resultSet.getString("normalized_email")),
                 PersonStatus.valueOf(resultSet.getString("status")),
-                resultSet.getObject("created_at", Instant.class)), argument);
+                instant(resultSet, "created_at")), argument);
         return people.stream().findFirst();
     }
 }

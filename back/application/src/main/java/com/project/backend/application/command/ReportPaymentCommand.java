@@ -1,6 +1,7 @@
 package com.project.backend.application.command;
 
 import com.project.backend.application.dto.Command;
+import com.project.backend.application.dto.PaymentRegistered;
 import com.project.backend.domain.payment.PaymentProof;
 import com.project.backend.domain.payment.PaymentType;
 import com.project.backend.domain.valueobject.UserAccountId;
@@ -20,7 +21,7 @@ public record ReportPaymentCommand(
         LocalDate reportedPaymentDate,
         String externalReference,
         UUID idempotencyKey,
-        List<PaymentProof> proofs) implements Command {
+        List<PaymentProof> proofs) implements Command<PaymentRegistered> {
     public ReportPaymentCommand {
         Objects.requireNonNull(payerAccountId, "The payer account is required");
         Objects.requireNonNull(loanId, "The loan is required");

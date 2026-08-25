@@ -7,5 +7,5 @@ package com.project.backend.application.dto;
  * Separar consultas de comandos permite optimizar cada lado por separado: las
  * readModel pueden saltarse el aggregate y proyectar directamente si hace falta.
  */
-public interface Query {
+public interface Query<R> extends Request<R> {
 }

@@ -56,6 +56,11 @@ public final class CreateLoanHandler implements CommandHandler<CreateLoanCommand
     }
 
     @Override
+    public Class<CreateLoanCommand> requestType() {
+        return CreateLoanCommand.class;
+    }
+
+    @Override
     public LoanCreated execute(CreateLoanCommand command) {
         return unitOfWork.execute(() -> {
             var lender = authorizer.requireActiveAccountWithRole(command.lenderAccountId(), UserRole.LENDER);

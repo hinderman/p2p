@@ -13,6 +13,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import static com.project.backend.infrastructure.persistence.JdbcTime.timestamp;
+
 /** Delivers encrypted invitation messages from the transactional outbox at least once. */
 @Component
 public final class InvitationEmailOutboxPublisher {
@@ -72,7 +74,7 @@ public final class InvitationEmailOutboxPublisher {
                     UPDATE loans.outbox_events
                     SET published_at = ?, last_error = NULL
                     WHERE outbox_event_id = ?
-                    """, clock.now(), record.id());
+                    """, timestamp(clock.now()), record.id());
             return true;
         } catch (RuntimeException exception) {
             jdbcTemplate.update("""

@@ -37,6 +37,11 @@ public final class RejectPaymentHandler implements CommandHandler<RejectPaymentC
     }
 
     @Override
+    public Class<RejectPaymentCommand> requestType() {
+        return RejectPaymentCommand.class;
+    }
+
+    @Override
     public PaymentProcessed execute(RejectPaymentCommand command) {
         return unitOfWork.execute(() -> {
             var lender = authorizer.requireActiveAccountWithRole(command.lenderAccountId(), UserRole.LENDER);

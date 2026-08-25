@@ -24,6 +24,40 @@ export function paymentErrorMessage(error: unknown): string {
   return 'No fue posible completar la operación. Revisa los datos e inténtalo nuevamente.';
 }
 
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'Borrador',
+  SUBMITTED: 'Enviado',
+  PENDING_REVIEW: 'Pendiente por pagar',
+  APPROVED: 'Pagado',
+  REJECTED: 'Rechazado',
+  REVERSED: 'Reversado',
+};
+
+const PAYMENT_STATUS_TONES: Record<string, string> = {
+  DRAFT: 'neutral',
+  SUBMITTED: 'pending',
+  PENDING_REVIEW: 'pending',
+  APPROVED: 'settled',
+  REJECTED: 'rejected',
+  REVERSED: 'rejected',
+};
+
+export function paymentStatusLabel(status: string): string {
+  return PAYMENT_STATUS_LABELS[status] ?? status;
+}
+
+export function paymentStatusTone(status: string): string {
+  return PAYMENT_STATUS_TONES[status] ?? 'neutral';
+}
+
+/**
+ * Only a payment still awaiting the lender decision can be settled; the backend
+ * rejects the operation for every other status.
+ */
+export function isPayablePayment(status: string): boolean {
+  return status === 'PENDING_REVIEW' || status === 'SUBMITTED';
+}
+
 export function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }

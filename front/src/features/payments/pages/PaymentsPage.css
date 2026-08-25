@@ -323,65 +323,162 @@
   margin-right: 0.45rem;
 }
 
-.pending-payment-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
-  gap: 1rem;
+.pending-payment-table-panel {
+  overflow: hidden;
+  border: 1px solid rgba(var(--ion-text-color-rgb), 0.08);
+  border-radius: 1rem;
+  background: var(--ion-card-background, #ffffff);
+  box-shadow: 0 0.35rem 1.4rem rgba(31, 49, 77, 0.045);
   transition: opacity 160ms ease;
 }
 
-.pending-payment-grid.refreshing {
+.pending-payment-table-panel.refreshing {
   opacity: 0.55;
+  pointer-events: none;
 }
 
-.pending-payment-card {
-  display: grid;
-  gap: 1rem;
-  padding: 1.15rem;
-  border: 1px solid rgba(var(--ion-text-color-rgb), 0.08);
-  border-radius: 0.9rem;
-  background: var(--ion-card-background, #ffffff);
+.pending-payment-table-scroll {
+  overflow-x: auto;
 }
 
-.pending-payment-card > div:first-child,
-.pending-payment-card dl div {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.7rem;
+.pending-payment-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
 }
 
-.payment-status {
-  color: var(--ion-color-warning-shade);
-  font-size: 0.68rem;
-  font-weight: 700;
+.pending-payment-table caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-.pending-payment-card code {
+.pending-payment-table th,
+.pending-payment-table td {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.pending-payment-table thead th {
+  border-bottom: 1px solid rgba(var(--ion-text-color-rgb), 0.08);
+  background: rgba(var(--ion-text-color-rgb), 0.025);
   color: var(--ion-color-medium);
-  font-size: 0.65rem;
+  font-size: 0.66rem;
+  font-weight: 720;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-.pending-payment-card > strong {
-  font-size: 1.35rem;
-  letter-spacing: -0.025em;
-}
-
-.pending-payment-card dl {
-  display: grid;
-  gap: 0.5rem;
-  margin: 0;
-  padding-top: 0.75rem;
+.pending-payment-table tbody tr + tr {
   border-top: 1px solid rgba(var(--ion-text-color-rgb), 0.07);
 }
 
-.pending-payment-card dt,
-.pending-payment-card dd {
+.pending-payment-table tbody tr:hover {
+  background: rgba(var(--ion-color-primary-rgb), 0.035);
+}
+
+.pending-payment-table .numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.pending-payment-table .numeric strong {
+  font-size: 0.88rem;
+  letter-spacing: -0.02em;
+}
+
+.pending-payment-table .actions {
+  width: 1%;
+  text-align: right;
+}
+
+.pending-payment-table .actions ion-button {
+  --border-radius: 0.6rem;
   margin: 0;
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-transform: none;
+}
+
+.pending-payment-table code {
+  color: var(--ion-color-medium);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 0.7rem;
 }
 
-.pending-payment-card dt { color: var(--ion-color-medium); }
-.pending-payment-card dd { font-weight: 620; }
+.payment-status {
+  display: inline-block;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(var(--ion-color-medium-rgb), 0.12);
+  color: var(--ion-color-medium-shade);
+  font-size: 0.65rem;
+  font-weight: 720;
+  white-space: nowrap;
+}
+
+.payment-status.tone-pending {
+  background: rgba(var(--ion-color-warning-rgb), 0.16);
+  color: var(--ion-color-warning-shade);
+}
+
+.payment-status.tone-settled {
+  background: rgba(var(--ion-color-success-rgb), 0.12);
+  color: var(--ion-color-success-shade);
+}
+
+.payment-status.tone-rejected {
+  background: rgba(var(--ion-color-danger-rgb), 0.11);
+  color: var(--ion-color-danger-shade);
+}
+
+.pending-payment-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-top: 1px solid rgba(var(--ion-text-color-rgb), 0.08);
+  background: rgba(var(--ion-text-color-rgb), 0.02);
+}
+
+.pending-payment-pagination p {
+  margin: 0;
+  color: var(--ion-color-medium);
+  font-size: 0.72rem;
+}
+
+.pending-payment-page-size ion-select {
+  --border-radius: 0.6rem;
+  min-height: 2rem;
+  color: var(--ion-color-medium-shade);
+  font-size: 0.72rem;
+}
+
+.pending-payment-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.pending-payment-page-controls span {
+  min-width: 6.5rem;
+  color: var(--ion-color-medium-shade);
+  font-size: 0.72rem;
+  font-weight: 620;
+  text-align: center;
+}
+
+.pending-payment-page-controls ion-button {
+  --border-radius: 0.55rem;
+  --padding-start: 0.35rem;
+  --padding-end: 0.35rem;
+  margin: 0;
+}
 
 .reversal-panel {
   margin-top: 0.75rem;
@@ -487,5 +584,74 @@
     --width: 100%;
     --height: 100%;
     --border-radius: 0;
+  }
+
+  /* The table collapses into one card per payment; each cell keeps its header
+     through data-label so the reading order stays understandable. */
+  .pending-payment-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .pending-payment-table,
+  .pending-payment-table tbody,
+  .pending-payment-table tr,
+  .pending-payment-table td {
+    display: block;
+    width: auto;
+  }
+
+  .pending-payment-table tbody tr {
+    padding: 0.35rem 0.15rem;
+  }
+
+  .pending-payment-table tbody tr + tr {
+    border-top: 1px solid rgba(var(--ion-text-color-rgb), 0.07);
+  }
+
+  .pending-payment-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.4rem 1rem;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .pending-payment-table td::before {
+    content: attr(data-label);
+    color: var(--ion-color-medium);
+    font-size: 0.68rem;
+    font-weight: 640;
+  }
+
+  .pending-payment-table td:empty {
+    display: none;
+  }
+
+  .pending-payment-table .numeric,
+  .pending-payment-table .actions {
+    width: auto;
+    text-align: left;
+  }
+
+  .pending-payment-pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .pending-payment-pagination p {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .pending-payment-table-panel {
+    box-shadow: 0 0.35rem 1.4rem rgba(0, 0, 0, 0.14);
   }
 }

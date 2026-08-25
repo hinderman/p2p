@@ -21,6 +21,9 @@ import java.util.HexFormat;
 import java.util.UUID;
 import java.util.Optional;
 
+import static com.project.backend.infrastructure.persistence.JdbcTime.timestamp;
+import static com.project.backend.infrastructure.persistence.JdbcTime.instant;
+
 /** Persists a single-use invitation token; only its SHA-256 digest is retained. */
 @Component
 public final class JdbcLoanInvitationAdapter implements LoanInvitationPort {
@@ -38,7 +41,7 @@ public final class JdbcLoanInvitationAdapter implements LoanInvitationPort {
         UUID invitationId = UUID.randomUUID();
         String rawToken = randomToken();
         jdbcTemplate.update("UPDATE loans.loan_invitations SET status = 'REVOKED', revoked_at = ? WHERE loan_term_id = ? AND status = 'PENDING'",
-                now, loanTermId.value());
+                timestamp(now), loanTermId.value());
         int inserted = jdbcTemplate.update("""
                 INSERT INTO loans.loan_invitations
                 (loan_invitation_id, loan_term_id, normalized_email, token_hash, status, expires_at, created_at,
@@ -47,7 +50,7 @@ public final class JdbcLoanInvitationAdapter implements LoanInvitationPort {
                 FROM loans.loans loan JOIN loans.user_accounts account ON account.person_id = loan.lender_person_id
                 WHERE loan.loan_id = ?
                 """, invitationId, loanTermId.value(), recipient.value(), sha256(rawToken),
-                now.plus(7, ChronoUnit.DAYS), now, loanId.value());
+                timestamp(now.plus(7, ChronoUnit.DAYS)), timestamp(now), loanId.value());
         if (inserted != 1) {
             throw new IllegalStateException("The invitation could not be created for the loan");
         }
@@ -69,7 +72,7 @@ public final class JdbcLoanInvitationAdapter implements LoanInvitationPort {
                 resultSet.getObject("loan_id", UUID.class),
                 resultSet.getString("normalized_email"),
                 resultSet.getString("status"),
-                resultSet.getObject("expires_at", Instant.class)), sha256(rawToken));
+                instant(resultSet, "expires_at")), sha256(rawToken));
         if (invitations.isEmpty()) {
             return Optional.empty();
         }
@@ -87,7 +90,7 @@ public final class JdbcLoanInvitationAdapter implements LoanInvitationPort {
         int updated = jdbcTemplate.update("""
                 UPDATE loans.loan_invitations SET status = 'ACCEPTED', accepted_at = ?
                 WHERE loan_invitation_id = ? AND status = 'PENDING'
-                """, acceptedAt, invitation.id());
+                """, timestamp(acceptedAt), invitation.id());
         if (updated != 1) {
             return Optional.empty();
         }
@@ -108,7 +111,7 @@ public final class JdbcLoanInvitationAdapter implements LoanInvitationPort {
                  source_ip, user_agent, accepted_at)
                 VALUES (?, ?, ?, 'PAYER', ?, CAST(? AS inet), ?, ?)
                 """, UUID.randomUUID(), invitation.loanTermId().value(), accountId.value(), invitation.invitationId().value(),
-                sourceIp, userAgent, acceptedAt);
+                sourceIp, userAgent, timestamp(acceptedAt));
     }
 
     private static String randomToken() {

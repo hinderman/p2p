@@ -13,6 +13,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import static com.project.backend.infrastructure.persistence.JdbcTime.instant;
+
 @Component
 public final class JdbcLoanReadModelAdapter implements LoanReadModelPort {
     private static final String LENDER_QUERY = """
@@ -58,7 +60,7 @@ public final class JdbcLoanReadModelAdapter implements LoanReadModelPort {
             return new LoanSummary(new LoanId(resultSet.getObject("loan_id", UUID.class)),
                     new PersonId(resultSet.getObject("counterparty_person_id", UUID.class)),
                     LoanStatus.valueOf(resultSet.getString("status")), principal, principal.subtract(principalPaid),
-                    resultSet.getObject("created_at", Instant.class));
+                    instant(resultSet, "created_at"));
         }, personId);
     }
 }

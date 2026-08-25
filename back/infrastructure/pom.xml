@@ -74,6 +74,26 @@
             <artifactId>spring-boot-starter-data-jpa-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>false</filtering>
+            </testResource>
+            <!-- Reuse the database-first source of truth; never maintain a test-only schema copy. -->
+            <testResource>
+                <directory>${maven.multiModuleProjectDirectory}/../.database</directory>
+                <targetPath>database</targetPath>
+                <filtering>false</filtering>
+            </testResource>
+        </testResources>
+    </build>
 
 </project>

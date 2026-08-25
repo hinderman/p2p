@@ -18,6 +18,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import static com.project.backend.infrastructure.persistence.JdbcTime.timestamp;
+import static com.project.backend.infrastructure.persistence.JdbcTime.instant;
+
 @Repository
 public final class JdbcUserAccountRepository implements UserAccountRepository {
     private final JdbcTemplate jdbcTemplate;
@@ -48,8 +51,8 @@ public final class JdbcUserAccountRepository implements UserAccountRepository {
                 SET password_hash = ?, status = ?, password_changed_at = ?, authorization_version = ?,
                     updated_at = ?, version = version + 1
                 WHERE user_account_id = ?
-                """, account.passwordHash().value(), account.status().name(), account.passwordChangedAt(),
-                account.authorizationVersion(), now, account.id().value());
+                """, account.passwordHash().value(), account.status().name(), timestamp(account.passwordChangedAt()),
+                account.authorizationVersion(), timestamp(now), account.id().value());
         if (updated == 0) {
             jdbcTemplate.update("""
                     INSERT INTO loans.user_accounts
@@ -57,8 +60,8 @@ public final class JdbcUserAccountRepository implements UserAccountRepository {
                      authorization_version, created_at, updated_at, version)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
                     """, account.id().value(), account.personId().value(), account.passwordHash().value(),
-                    account.status().name(), account.passwordChangedAt(), account.authorizationVersion(),
-                    account.createdAt(), now);
+                    account.status().name(), timestamp(account.passwordChangedAt()), account.authorizationVersion(),
+                    timestamp(account.createdAt()), timestamp(now));
         }
         synchronizeRoles(account, now);
         return account;
@@ -86,8 +89,8 @@ public final class JdbcUserAccountRepository implements UserAccountRepository {
                     UserAccountStatus.valueOf(resultSet.getString("status")),
                     findRoles(accountId),
                     resultSet.getLong("authorization_version"),
-                    resultSet.getObject("password_changed_at", Instant.class),
-                    resultSet.getObject("created_at", Instant.class));
+                    instant(resultSet, "password_changed_at"),
+                    instant(resultSet, "created_at"));
         }, argument);
         return accounts.stream().findFirst();
     }
@@ -107,7 +110,7 @@ public final class JdbcUserAccountRepository implements UserAccountRepository {
                     INSERT INTO loans.user_account_roles (user_account_id, role_code, granted_at)
                     VALUES (?, ?, ?)
                     ON CONFLICT (user_account_id, role_code) DO NOTHING
-                    """, account.id().value(), role.name(), grantedAt);
+                    """, account.id().value(), role.name(), timestamp(grantedAt));
         }
     }
 }

@@ -2,6 +2,8 @@ import { apiClient, ApiError } from '../../../core/http/apiClient';
 import type {
   ApprovePaymentInput,
   PaymentMoney,
+  PaymentPage,
+  PaymentPageRequest,
   PaymentResult,
   PendingPayment,
   ReportPaymentInput,
@@ -69,18 +71,38 @@ export async function reportPayment(
   return parsePaymentResult(response);
 }
 
-export async function listPendingPayments(loanId: string, signal?: AbortSignal): Promise<PendingPayment[]> {
-  const response = await apiClient<unknown>(`/api/v1/loans/${loanId}/payments/pending`, {
+function parseCount(value: unknown): number | null {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+function parsePendingPaymentPage(value: unknown): PaymentPage {
+  const invalid = new ApiError(200, 'invalid_response', 'Invalid pending payment page');
+  if (!isRecord(value) || !Array.isArray(value.content)) throw invalid;
+  const content = value.content.map(parsePendingPayment);
+  const page = parseCount(value.page);
+  const size = parseCount(value.size);
+  const totalElements = parseCount(value.totalElements);
+  const totalPages = parseCount(value.totalPages);
+  if (
+    page === null || size === null || totalElements === null || totalPages === null ||
+    typeof value.hasNext !== 'boolean' || content.some((payment) => payment === null)
+  ) throw invalid;
+  return { content: content as PendingPayment[], page, size, totalElements, totalPages, hasNext: value.hasNext };
+}
+
+/** The slice is resolved by the backend; this only asks for an index and a size. */
+export async function listPendingPayments(
+  loanId: string,
+  pageRequest: PaymentPageRequest,
+  signal?: AbortSignal,
+): Promise<PaymentPage> {
+  const query = new URLSearchParams({ page: String(pageRequest.page), size: String(pageRequest.size) });
+  const response = await apiClient<unknown>(`/api/v1/loans/${loanId}/payments/pending?${query.toString()}`, {
     globalError: false,
     globalLoading: false,
     signal,
   });
-  if (!Array.isArray(response)) throw new ApiError(200, 'invalid_response', 'Invalid pending payment list');
-  const payments = response.map(parsePendingPayment);
-  if (payments.some((payment) => payment === null)) {
-    throw new ApiError(200, 'invalid_response', 'Invalid pending payment list');
-  }
-  return payments as PendingPayment[];
+  return parsePendingPaymentPage(response);
 }
 
 export async function approvePayment(paymentId: string, input: ApprovePaymentInput): Promise<PaymentResult> {

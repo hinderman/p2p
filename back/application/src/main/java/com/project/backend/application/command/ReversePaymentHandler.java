@@ -49,6 +49,11 @@ public final class ReversePaymentHandler implements CommandHandler<ReversePaymen
     }
 
     @Override
+    public Class<ReversePaymentCommand> requestType() {
+        return ReversePaymentCommand.class;
+    }
+
+    @Override
     public PaymentProcessed execute(ReversePaymentCommand command) {
         return unitOfWork.execute(() -> {
             var lender = authorizer.requireActiveAccountWithRole(command.lenderAccountId(), UserRole.LENDER);

@@ -19,6 +19,9 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
 
+import static com.project.backend.infrastructure.persistence.JdbcTime.timestamp;
+import static com.project.backend.infrastructure.persistence.JdbcTime.instant;
+
 /** Issues short-lived signed access tokens and persists rotating refresh-token state. */
 @Component
 public final class JwtAuthenticationTokenIssuer implements AuthenticationTokenIssuerPort, AuthenticationSessionPort {
@@ -50,15 +53,15 @@ public final class JwtAuthenticationTokenIssuer implements AuthenticationTokenIs
         jdbcTemplate.update("""
                 INSERT INTO loans.user_sessions (session_id, user_account_id, created_at, expires_at)
                 VALUES (?, ?, ?, ?)
-                """, sessionId, account.id().value(), issuedAt, refreshTokenExpiresAt);
+                """, sessionId, account.id().value(), timestamp(issuedAt), timestamp(refreshTokenExpiresAt));
         jdbcTemplate.update("""
                 INSERT INTO loans.refresh_tokens (refresh_token_id, session_id, token_hash, issued_at, expires_at)
                 VALUES (?, ?, ?, ?, ?)
-                """, refreshTokenId, sessionId, sha256(refreshToken), issuedAt, refreshTokenExpiresAt);
+                """, refreshTokenId, sessionId, sha256(refreshToken), timestamp(issuedAt), timestamp(refreshTokenExpiresAt));
         jdbcTemplate.update("""
                 UPDATE loans.user_accounts SET last_sign_in_at = ?, updated_at = ?, version = version + 1
                 WHERE user_account_id = ?
-                """, issuedAt, issuedAt, account.id().value());
+                """, timestamp(issuedAt), timestamp(issuedAt), account.id().value());
 
         return new AuthenticatedSession(account.id(), account.personId(), account.roles(),
                 codec.issue(account, sessionId, issuedAt, accessTokenExpiresAt), refreshToken, accessTokenExpiresAt);
@@ -80,11 +83,11 @@ public final class JwtAuthenticationTokenIssuer implements AuthenticationTokenIs
                 resultSet.getObject("refresh_token_id", UUID.class),
                 resultSet.getObject("session_id", UUID.class),
                 resultSet.getObject("user_account_id", UUID.class),
-                resultSet.getObject("token_expires_at", Instant.class),
-                resultSet.getObject("session_expires_at", Instant.class),
-                resultSet.getObject("consumed_at", Instant.class),
-                resultSet.getObject("token_revoked_at", Instant.class),
-                resultSet.getObject("session_revoked_at", Instant.class)), hash);
+                instant(resultSet, "token_expires_at"),
+                instant(resultSet, "session_expires_at"),
+                instant(resultSet, "consumed_at"),
+                instant(resultSet, "token_revoked_at"),
+                instant(resultSet, "session_revoked_at")), hash);
         if (records.isEmpty()) {
             return java.util.Optional.empty();
         }
@@ -111,9 +114,9 @@ public final class JwtAuthenticationTokenIssuer implements AuthenticationTokenIs
         jdbcTemplate.update("""
                 INSERT INTO loans.refresh_tokens (refresh_token_id, session_id, token_hash, issued_at, expires_at)
                 VALUES (?, ?, ?, ?, ?)
-                """, replacementId, record.sessionId(), sha256(replacementToken), occurredAt, refreshExpiresAt);
+                """, replacementId, record.sessionId(), sha256(replacementToken), timestamp(occurredAt), timestamp(refreshExpiresAt));
         jdbcTemplate.update("UPDATE loans.refresh_tokens SET consumed_at = ?, replaced_by_id = ? WHERE refresh_token_id = ?",
-                occurredAt, replacementId, record.refreshTokenId());
+                timestamp(occurredAt), replacementId, record.refreshTokenId());
         return java.util.Optional.of(new AuthenticatedSession(account.id(), account.personId(), account.roles(),
                 codec.issue(account, record.sessionId(), occurredAt, accessExpiresAt), replacementToken, accessExpiresAt));
     }
@@ -129,11 +132,11 @@ public final class JwtAuthenticationTokenIssuer implements AuthenticationTokenIs
                   AND session.revoked_at IS NULL
                   AND session.expires_at > ?
                   AND token.revoked_at IS NULL
-                """, occurredAt, accountId.value(), occurredAt);
+                """, timestamp(occurredAt), accountId.value(), timestamp(occurredAt));
         jdbcTemplate.update("""
                 UPDATE loans.user_sessions SET revoked_at = ?, revocation_reason = 'USER_SIGN_OUT'
                 WHERE user_account_id = ? AND revoked_at IS NULL AND expires_at > ?
-                """, occurredAt, accountId.value(), occurredAt);
+                """, timestamp(occurredAt), accountId.value(), timestamp(occurredAt));
     }
 
     private static String randomToken() {
@@ -155,11 +158,11 @@ public final class JwtAuthenticationTokenIssuer implements AuthenticationTokenIs
         jdbcTemplate.update("""
                 UPDATE loans.refresh_tokens SET revoked_at = ?
                 WHERE session_id = ? AND revoked_at IS NULL
-                """, occurredAt, sessionId);
+                """, timestamp(occurredAt), sessionId);
         jdbcTemplate.update("""
                 UPDATE loans.user_sessions SET revoked_at = ?, revocation_reason = ?
                 WHERE session_id = ? AND revoked_at IS NULL
-                """, occurredAt, reason, sessionId);
+                """, timestamp(occurredAt), reason, sessionId);
     }
 
     private static Instant min(Instant first, Instant second) {

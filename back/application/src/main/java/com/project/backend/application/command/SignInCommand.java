@@ -1,11 +1,12 @@
 package com.project.backend.application.command;
 
 import com.project.backend.application.dto.Command;
+import com.project.backend.application.dto.AuthenticatedSession;
 import com.project.backend.domain.valueobject.EmailAddress;
 
 import java.util.Objects;
 
-public record SignInCommand(EmailAddress email, char[] password, String sourceIp) implements Command {
+public record SignInCommand(EmailAddress email, char[] password, String sourceIp) implements Command<AuthenticatedSession> {
     public SignInCommand {
         Objects.requireNonNull(email, "El email es obligatorio");
         Objects.requireNonNull(password, "Password is required");

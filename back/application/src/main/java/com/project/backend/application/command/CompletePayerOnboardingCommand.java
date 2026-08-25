@@ -1,6 +1,7 @@
 package com.project.backend.application.command;
 
 import com.project.backend.application.dto.Command;
+import com.project.backend.application.dto.AuthenticatedSession;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -10,7 +11,7 @@ public record CompletePayerOnboardingCommand(
         String invitationToken,
         char[] password,
         String sourceIp,
-        String userAgent) implements Command {
+        String userAgent) implements Command<AuthenticatedSession> {
     public CompletePayerOnboardingCommand {
         invitationToken = Objects.requireNonNull(invitationToken, "The invitation token is required").strip();
         if (invitationToken.isEmpty() || invitationToken.length() > 512) {

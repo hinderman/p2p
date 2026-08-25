@@ -57,16 +57,30 @@ describe('payments API', () => {
     expect(JSON.parse(request.body as string)).toEqual(input);
   });
 
-  test('lists pending payments and normalizes BigDecimal values', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response([{
-      reportedPaymentId: 'payment-id', loanId: 'loan-id', status: 'PENDING_REVIEW',
-      reportedAmount: { amount: 1200.5, currency: 'COP' }, validatedAmount: null,
-      reportedPaymentDate: '2026-08-24',
-    }])));
+  test('requests one server page and normalizes BigDecimal values', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response({
+      content: [{
+        reportedPaymentId: 'payment-id', loanId: 'loan-id', status: 'PENDING_REVIEW',
+        reportedAmount: { amount: 1200.5, currency: 'COP' }, validatedAmount: null,
+        reportedPaymentDate: '2026-08-24',
+      }],
+      page: 1, size: 5, totalElements: 7, totalPages: 2, hasNext: false,
+    }));
+    vi.stubGlobal('fetch', fetchMock);
 
-    await expect(listPendingPayments('loan-id')).resolves.toEqual([expect.objectContaining({
+    const result = await listPendingPayments('loan-id', { page: 1, size: 5 });
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/loans/loan-id/payments/pending?page=1&size=5');
+    expect(result.content).toEqual([expect.objectContaining({
       reportedAmount: { amount: '1200.5000', currency: 'COP' }, validatedAmount: null,
     })]);
+    expect(result).toMatchObject({ page: 1, size: 5, totalElements: 7, totalPages: 2, hasNext: false });
+  });
+
+  test('rejects a page response without its pagination metadata', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ content: [] })));
+
+    await expect(listPendingPayments('loan-id', { page: 0, size: 5 })).rejects.toThrow();
   });
 
   test('sends a complete approval allocation contract', async () => {

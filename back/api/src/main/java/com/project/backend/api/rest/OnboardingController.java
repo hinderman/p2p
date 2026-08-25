@@ -4,8 +4,7 @@ import com.project.backend.api.dto.request.PayerOnboardingRequest;
 import com.project.backend.api.dto.response.AuthenticatedSessionResponse;
 import com.project.backend.api.mapper.ApiMapper;
 import com.project.backend.application.command.CompletePayerOnboardingCommand;
-import com.project.backend.application.dto.AuthenticatedSession;
-import com.project.backend.application.port.in.command.CommandHandler;
+import com.project.backend.application.port.in.ApplicationMediator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,17 +20,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/v1/onboarding", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Onboarding")
 public class OnboardingController {
-    private final CommandHandler<CompletePayerOnboardingCommand, AuthenticatedSession> completePayerOnboarding;
+    private final ApplicationMediator mediator;
 
-    public OnboardingController(CommandHandler<CompletePayerOnboardingCommand, AuthenticatedSession> completePayerOnboarding) {
-        this.completePayerOnboarding = completePayerOnboarding;
+    public OnboardingController(ApplicationMediator mediator) {
+        this.mediator = mediator;
     }
 
     @PostMapping(path = "/payer", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Redeem a payer invitation, activate the account, and accept the loan")
     public AuthenticatedSessionResponse completePayerOnboarding(
             @Valid @RequestBody PayerOnboardingRequest request, HttpServletRequest httpRequest) {
-        return ApiMapper.response(completePayerOnboarding.execute(new CompletePayerOnboardingCommand(
+        return ApiMapper.response(mediator.send(new CompletePayerOnboardingCommand(
                 request.invitationToken(), request.password().toCharArray(), httpRequest.getRemoteAddr(),
                 httpRequest.getHeader("User-Agent"))));
     }

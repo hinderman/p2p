@@ -36,6 +36,11 @@ public final class SignInHandler implements CommandHandler<SignInCommand, Authen
     }
 
     @Override
+    public Class<SignInCommand> requestType() {
+        return SignInCommand.class;
+    }
+
+    @Override
     public AuthenticatedSession execute(SignInCommand command) {
         char[] password = command.password();
         var now = clock.now();

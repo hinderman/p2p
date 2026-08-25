@@ -36,6 +36,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import static com.project.backend.infrastructure.persistence.JdbcTime.timestamp;
+import static com.project.backend.infrastructure.persistence.JdbcTime.instant;
+
 @Repository
 public final class JdbcLoanRepository implements LoanRepository {
     private final JdbcTemplate jdbcTemplate;
@@ -68,15 +71,15 @@ public final class JdbcLoanRepository implements LoanRepository {
                     activated_at = CASE WHEN ? = 'ACTIVE' THEN COALESCE(activated_at, ?) ELSE activated_at END,
                     cancelled_at = CASE WHEN ? = 'CANCELLED' THEN COALESCE(cancelled_at, ?) ELSE cancelled_at END
                 WHERE loan_id = ?
-                """, loan.status().name(), currency, now, loan.status().name(), now,
-                loan.status().name(), now, loan.id().value());
+                """, loan.status().name(), currency, timestamp(now), loan.status().name(), timestamp(now),
+                loan.status().name(), timestamp(now), loan.id().value());
         if (updated == 0) {
             jdbcTemplate.update("""
                     INSERT INTO loans.loans
                     (loan_id, lender_person_id, payer_person_id, currency_code, status, created_at, updated_at, version)
                     VALUES (?, ?, ?, ?, ?, ?, ?, 0)
                     """, loan.id().value(), loan.lenderPersonId().value(), loan.payerPersonId().value(),
-                    currency, loan.status().name(), loan.createdAt(), now);
+                    currency, loan.status().name(), timestamp(loan.createdAt()), timestamp(now));
         }
         UUID lenderAccountId = lenderAccountId(loan.lenderPersonId());
         for (LoanTerms terms : loan.terms()) {
@@ -119,7 +122,7 @@ public final class JdbcLoanRepository implements LoanRepository {
                     new PersonId(resultSet.getObject("payer_person_id", UUID.class)),
                     LoanStatus.valueOf(resultSet.getString("status")), terms,
                     findCurrentPaymentPlan(loanId, resultSet.getString("currency_code")),
-                    resultSet.getObject("created_at", Instant.class));
+                    instant(resultSet, "created_at"));
         }, argument);
     }
 
@@ -175,7 +178,7 @@ public final class JdbcLoanRepository implements LoanRepository {
                     new LoanTermId(resultSet.getObject("loan_term_id", UUID.class)),
                     resultSet.getInt("version_number"), PaymentPlanReason.valueOf(resultSet.getString("reason")),
                     installments, PaymentPlanStatus.valueOf(resultSet.getString("status")),
-                    resultSet.getObject("created_at", Instant.class), resultSet.getObject("superseded_at", Instant.class));
+                    instant(resultSet, "created_at"), instant(resultSet, "superseded_at"));
         }, loanId);
         return plans.isEmpty() ? null : plans.getFirst();
     }
@@ -196,7 +199,7 @@ public final class JdbcLoanRepository implements LoanRepository {
                 terms.originalPrincipal().amount(), terms.interestRate().percentage(), terms.ratePeriod().name(),
                 terms.interestCalculationMethod().name(), terms.dayCountBasis().name(), terms.amortizationMethod().name(),
                 terms.capitalPrepaymentPolicy().name(), terms.installmentCount(), terms.firstDueDate(), terms.timeZone().getId(),
-                now, now, lenderAccountId);
+                timestamp(now), timestamp(now), lenderAccountId);
         persistScheduleRule(terms.id(), terms.paymentScheduleRule(), now);
     }
 
@@ -207,7 +210,7 @@ public final class JdbcLoanRepository implements LoanRepository {
                 (payment_schedule_rule_id, loan_term_id, frequency, interval_days, non_business_day_adjustment, created_at)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """, ruleId, termId.value(), rule.frequency().name(), rule.intervalDays(),
-                rule.nonBusinessDayAdjustment().name(), now);
+                rule.nonBusinessDayAdjustment().name(), timestamp(now));
         for (Integer day : rule.daysOfMonth()) {
             jdbcTemplate.update("INSERT INTO loans.payment_schedule_rule_days (payment_schedule_rule_id, day_of_month) VALUES (?, ?)",
                     ruleId, day);
@@ -218,17 +221,17 @@ public final class JdbcLoanRepository implements LoanRepository {
         jdbcTemplate.update("""
                 UPDATE loans.payment_plans SET status = 'SUPERSEDED', superseded_at = ?
                 WHERE loan_term_id = ? AND status = 'CURRENT' AND payment_plan_id <> ?
-                """, now, plan.loanTermId().value(), plan.id().value());
+                """, timestamp(now), plan.loanTermId().value(), plan.id().value());
         int updated = jdbcTemplate.update("""
                 UPDATE loans.payment_plans SET status = ?, reason = ?, superseded_at = ? WHERE payment_plan_id = ?
-                """, plan.status().name(), plan.reason().name(), plan.replacedAt(), plan.id().value());
+                """, plan.status().name(), plan.reason().name(), timestamp(plan.replacedAt()), plan.id().value());
         if (updated == 0) {
             jdbcTemplate.update("""
                     INSERT INTO loans.payment_plans
                     (payment_plan_id, loan_term_id, version_number, status, reason, created_at, superseded_at, created_by_user_account_id)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """, plan.id().value(), plan.loanTermId().value(), plan.versionNumber(), plan.status().name(),
-                    plan.reason().name(), plan.createdAt(), plan.replacedAt(), lenderAccountId);
+                    plan.reason().name(), timestamp(plan.createdAt()), timestamp(plan.replacedAt()), lenderAccountId);
             for (Installment installment : plan.installments()) {
                 jdbcTemplate.update("""
                         INSERT INTO loans.installments
@@ -236,7 +239,7 @@ public final class JdbcLoanRepository implements LoanRepository {
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                         """, installment.id().value(), plan.id().value(), installment.number(), installment.dueDate(),
                         installment.agreedPrincipal().amount(), installment.agreedInterest().amount(), installment.agreedFee().amount(),
-                        plan.createdAt());
+                        timestamp(plan.createdAt()));
             }
         }
     }

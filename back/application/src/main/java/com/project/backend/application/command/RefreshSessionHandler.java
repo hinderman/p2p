@@ -18,6 +18,11 @@ public final class RefreshSessionHandler implements CommandHandler<RefreshSessio
     }
 
     @Override
+    public Class<RefreshSessionCommand> requestType() {
+        return RefreshSessionCommand.class;
+    }
+
+    @Override
     public AuthenticatedSession execute(RefreshSessionCommand command) {
         return sessions.rotateRefreshToken(command.refreshToken(), clock.now())
                 .orElseThrow(AuthenticationFailedException::new);

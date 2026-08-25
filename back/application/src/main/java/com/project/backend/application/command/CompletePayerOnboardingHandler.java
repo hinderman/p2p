@@ -76,6 +76,11 @@ public final class CompletePayerOnboardingHandler
     }
 
     @Override
+    public Class<CompletePayerOnboardingCommand> requestType() {
+        return CompletePayerOnboardingCommand.class;
+    }
+
+    @Override
     public AuthenticatedSession execute(CompletePayerOnboardingCommand command) {
         char[] password = command.password();
         try {

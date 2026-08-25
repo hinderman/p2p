@@ -16,8 +16,10 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.LinkedHashMap;
@@ -79,8 +81,15 @@ public class ApiExceptionHandler {
         return ResponseEntity.badRequest().body(detail);
     }
 
+    /**
+     * A path variable or query parameter that cannot be converted to its declared
+     * type is a client defect, not a server failure: without this it would reach
+     * the catch-all handler and be reported as a 500, which misleads the caller
+     * into retrying and pollutes error monitoring.
+     */
     @ExceptionHandler({ConstraintViolationException.class, HttpMessageNotReadableException.class,
-            MissingRequestHeaderException.class, IllegalArgumentException.class})
+            MissingRequestHeaderException.class, IllegalArgumentException.class,
+            MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class})
     ResponseEntity<ProblemDetail> handleMalformedRequest(Exception exception) {
         return problem(HttpStatus.BAD_REQUEST, "malformed_request", "Malformed request",
                 "The request body, path, or query parameters are invalid");

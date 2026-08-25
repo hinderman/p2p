@@ -6,15 +6,16 @@ import { useParams } from 'react-router-dom';
 import { AppPage } from '../../../shared/ui/AppPage';
 import { reversePayment } from '../api/paymentsApi';
 import { FinancialConfirmation } from '../components/FinancialConfirmation';
+import { PendingPaymentsTable } from '../components/PendingPaymentsTable';
 import { ReviewPaymentModal } from '../components/ReviewPaymentModal';
-import { formatPaymentMoney, isUuid, paymentErrorMessage } from '../model/paymentPresentation';
+import { isUuid, paymentErrorMessage } from '../model/paymentPresentation';
 import type { PaymentResult, PendingPayment } from '../model/payment.types';
 import { usePendingPayments } from '../model/usePendingPayments';
 import './PaymentsPage.css';
 
 export function PendingPaymentsPage() {
   const { loanId = '' } = useParams();
-  const { error, payments, reload, status } = usePendingPayments(loanId);
+  const { changePageSize, error, goToPage, page, payments, reload, status } = usePendingPayments(loanId);
   const [selectedPayment, setSelectedPayment] = useState<PendingPayment | null>(null);
   const [processed, setProcessed] = useState<PaymentResult | null>(null);
   const [reversalPaymentId, setReversalPaymentId] = useState('');
@@ -72,13 +73,8 @@ export function PendingPaymentsPage() {
 
         {status === 'loading' && payments.length === 0 && <div className="payment-state" role="status"><IonSpinner name="crescent" /><h2>Cargando pagos</h2></div>}
         {status === 'error' && payments.length === 0 && <section className="payment-state" role="alert"><IonIcon icon={alertCircleOutline} /><h2>No pudimos consultar los pagos</h2><p>{paymentErrorMessage(error)}</p><IonButton fill="outline" onClick={reload}>Reintentar</IonButton></section>}
-        {status === 'ready' && payments.length === 0 && <section className="payment-state"><h2>No hay pagos por revisar</h2><p>Los nuevos reportes del pagador aparecerán aquí.</p></section>}
-        {payments.length > 0 && <div className={status === 'loading' ? 'pending-payment-grid refreshing' : 'pending-payment-grid'}>{payments.map((payment) => <article className="pending-payment-card" key={payment.reportedPaymentId}>
-          <div><span className="payment-status">Pendiente de revisión</span><code>#{payment.reportedPaymentId.slice(0, 8)}</code></div>
-          <strong>{formatPaymentMoney(payment.reportedAmount)}</strong>
-          <dl><div><dt>Fecha reportada</dt><dd>{payment.reportedPaymentDate}</dd></div><div><dt>Préstamo</dt><dd>#{payment.loanId.slice(0, 8)}</dd></div></dl>
-          <IonButton expand="block" fill="outline" onClick={() => setSelectedPayment(payment)}>Revisar pago</IonButton>
-        </article>)}</div>}
+        {status === 'ready' && page.totalElements === 0 && <section className="payment-state"><h2>No hay pagos por revisar</h2><p>Los nuevos reportes del pagador aparecerán aquí.</p></section>}
+        {payments.length > 0 && <PendingPaymentsTable isRefreshing={status === 'loading'} page={page} onPageChange={goToPage} onPageSizeChange={changePageSize} onPay={setSelectedPayment} />}
 
         <section className="reversal-panel">
           <div className="reversal-panel-heading"><IonIcon icon={returnDownBackOutline} /><div><h2>Reversar pago aprobado</h2><p>Utiliza esta operación sólo para corregir un pago previamente aprobado.</p></div></div>

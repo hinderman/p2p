@@ -19,6 +19,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import static com.project.backend.infrastructure.persistence.JdbcTime.timestamp;
+
 /** Stores domain events atomically with aggregate state by using the transactional outbox. */
 @Component
 public final class JdbcOutboxEventsAdapter implements OutboxEventsPort {
@@ -39,7 +41,7 @@ public final class JdbcOutboxEventsAdapter implements OutboxEventsPort {
                     (outbox_event_id, aggregate_type, aggregate_id, event_type, payload, occurred_at)
                     VALUES (?, ?, ?, ?, CAST(? AS jsonb), ?)
                     """, UUID.randomUUID(), aggregate.type(), aggregate.id(), event.getClass().getSimpleName(),
-                    "{\"event_type\":\"" + event.getClass().getSimpleName() + "\"}", event.occurredAt());
+                    "{\"event_type\":\"" + event.getClass().getSimpleName() + "\"}", timestamp(event.occurredAt()));
         }
     }
 
@@ -49,7 +51,7 @@ public final class JdbcOutboxEventsAdapter implements OutboxEventsPort {
                 INSERT INTO loans.outbox_events
                 (outbox_event_id, aggregate_type, aggregate_id, event_type, payload, occurred_at)
                 VALUES (?, 'LoanInvitation', ?, 'LoanInvitationEmailRequested', CAST(? AS jsonb), ?)
-                """, UUID.randomUUID(), invitation.invitationId().value(), invitationPayloadCipher.encrypt(invitation), occurredAt);
+                """, UUID.randomUUID(), invitation.invitationId().value(), invitationPayloadCipher.encrypt(invitation), timestamp(occurredAt));
     }
 
     private static AggregateReference aggregateReference(DomainEvent event) {

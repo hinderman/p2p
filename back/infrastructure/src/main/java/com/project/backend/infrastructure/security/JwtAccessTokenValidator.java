@@ -10,6 +10,8 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.project.backend.infrastructure.persistence.JdbcTime.timestamp;
+
 /** Verifies JWT integrity and current server-side session/account authorization state. */
 @Component
 public final class JwtAccessTokenValidator implements AccessTokenValidationPort {
@@ -40,7 +42,7 @@ public final class JwtAccessTokenValidator implements AccessTokenValidationPort 
                           AND account.status = 'ACTIVE'
                           AND account.authorization_version = ?
                     )
-                    """, Boolean.class, token.sessionId(), token.accountId().value(), now, token.authorizationVersion());
+                    """, Boolean.class, token.sessionId(), token.accountId().value(), timestamp(now), token.authorizationVersion());
             return Boolean.TRUE.equals(active) ? Optional.of(token) : Optional.empty();
         } catch (RuntimeException exception) {
             return Optional.empty();

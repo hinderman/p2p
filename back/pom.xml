@@ -109,4 +109,31 @@
         </plugins>
     </build>
 
+    <profiles>
+        <!--
+          Integration tests are deliberately opt-in for local unit-test runs because
+          they require a container runtime. CI always enables this profile. Failsafe
+          executes *IT classes during verify, after the fast Surefire suite.
+        -->
+        <profile>
+            <id>integration</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>

@@ -16,6 +16,11 @@ public final class RevokeSessionsHandler implements CommandHandler<RevokeSession
     }
 
     @Override
+    public Class<RevokeSessionsCommand> requestType() {
+        return RevokeSessionsCommand.class;
+    }
+
+    @Override
     public Void execute(RevokeSessionsCommand command) {
         sessions.revokeAllActiveSessions(command.accountId(), clock.now());
         return null;

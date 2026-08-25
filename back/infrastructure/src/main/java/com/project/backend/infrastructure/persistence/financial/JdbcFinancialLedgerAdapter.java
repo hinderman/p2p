@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.UUID;
 
+import static com.project.backend.infrastructure.persistence.JdbcTime.timestamp;
+
 /** PostgreSQL append-only journal writer. Its unique key makes command retries harmless. */
 @Component
 public final class JdbcFinancialLedgerAdapter implements FinancialLedgerPort {
@@ -27,7 +29,7 @@ public final class JdbcFinancialLedgerAdapter implements FinancialLedgerPort {
                 VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT (reported_payment_id, journal_type) DO NOTHING
                 """, journalId, journal.loanId().value(), journal.reportedPaymentId().value(), journal.type().name(),
-                journal.currency(), recordedAt);
+                journal.currency(), timestamp(recordedAt));
         if (inserted == 0) {
             return;
         }
@@ -37,7 +39,7 @@ public final class JdbcFinancialLedgerAdapter implements FinancialLedgerPort {
                     (financial_ledger_entry_id, financial_journal_id, account_code, entry_side, amount, created_at)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """, UUID.randomUUID(), journalId, entry.account().name(), entry.side().name(),
-                    entry.amount().amount(), recordedAt);
+                    entry.amount().amount(), timestamp(recordedAt));
         }
     }
 }

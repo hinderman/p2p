@@ -11,8 +11,10 @@ import com.project.backend.api.dto.response.AuthenticatedSessionResponse;
 import com.project.backend.api.dto.response.LoanResponse;
 import com.project.backend.api.dto.response.LoanSummaryResponse;
 import com.project.backend.api.dto.response.MoneyResponse;
+import com.project.backend.api.dto.response.PageResponse;
 import com.project.backend.api.dto.response.PaymentResponse;
 import com.project.backend.api.dto.response.PaymentSummaryResponse;
+import com.project.backend.application.dto.Page;
 import com.project.backend.application.command.ApprovePaymentCommand;
 import com.project.backend.application.command.CreateLoanCommand;
 import com.project.backend.application.command.ReportPaymentCommand;
@@ -88,10 +90,20 @@ public final class ApiMapper {
                 loan.status(), response(loan.originalPrincipal()), response(loan.outstandingBalance()), loan.createdAt())).toList();
     }
 
-    public static List<PaymentSummaryResponse> responsesForPayments(List<PaymentSummary> payments) {
-        return payments.stream().map(payment -> new PaymentSummaryResponse(payment.reportedPaymentId().value(),
-                payment.loanId().value(), payment.status(), response(payment.reportedAmount()),
-                payment.validatedAmount() == null ? null : response(payment.validatedAmount()), payment.reportedPaymentDate())).toList();
+    public static PageResponse<PaymentSummaryResponse> responsesForPayments(Page<PaymentSummary> payments) {
+        return response(payments.map(ApiMapper::response));
+    }
+
+    private static PaymentSummaryResponse response(PaymentSummary payment) {
+        return new PaymentSummaryResponse(payment.reportedPaymentId().value(), payment.loanId().value(),
+                payment.status(), response(payment.reportedAmount()),
+                payment.validatedAmount() == null ? null : response(payment.validatedAmount()),
+                payment.reportedPaymentDate());
+    }
+
+    private static <T> PageResponse<T> response(Page<T> page) {
+        return new PageResponse<>(page.content(), page.page(), page.size(),
+                page.totalElements(), page.totalPages(), page.hasNext());
     }
 
     private static Money money(MoneyRequest request) {

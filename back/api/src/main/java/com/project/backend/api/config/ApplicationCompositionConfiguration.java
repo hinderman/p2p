@@ -1,5 +1,6 @@
 package com.project.backend.api.config;
 
+import com.project.backend.api.observability.ApplicationRequestMetricsPipeline;
 import com.project.backend.application.command.AcceptLoanCommand;
 import com.project.backend.application.command.AcceptLoanHandler;
 import com.project.backend.application.command.ApprovePaymentCommand;
@@ -24,9 +25,14 @@ import com.project.backend.application.dto.AuthenticatedSession;
 import com.project.backend.application.dto.LoanAccepted;
 import com.project.backend.application.dto.LoanCreated;
 import com.project.backend.application.dto.LoanSummary;
+import com.project.backend.application.dto.Page;
 import com.project.backend.application.dto.PaymentProcessed;
 import com.project.backend.application.dto.PaymentRegistered;
 import com.project.backend.application.dto.PaymentSummary;
+import com.project.backend.application.mediator.PipelineApplicationMediator;
+import com.project.backend.application.port.in.ApplicationMediator;
+import com.project.backend.application.port.in.RequestHandler;
+import com.project.backend.application.port.in.RequestPipeline;
 import com.project.backend.application.port.in.command.CommandHandler;
 import com.project.backend.application.port.in.query.QueryHandler;
 import com.project.backend.application.port.out.AuthenticationTokenIssuerPort;
@@ -56,6 +62,8 @@ import com.project.backend.domain.repository.ReportedPaymentRepository;
 import com.project.backend.domain.repository.UserAccountRepository;
 import com.project.backend.domain.service.PaymentPlanGenerator;
 import com.project.backend.domain.service.StandardPaymentPlanGenerator;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -64,6 +72,21 @@ import java.util.List;
 /** Explicit composition root; framework annotations never leak into application or domain. */
 @Configuration
 public class ApplicationCompositionConfiguration {
+
+    /**
+     * The API remains the composition root: application handlers are explicit
+     * beans, while this mediator discovers those typed input ports and applies
+     * only payload-safe cross-cutting behavior.
+     */
+    @Bean
+    ApplicationMediator applicationMediator(
+            List<RequestHandler<?, ?>> handlers,
+            ObjectProvider<MeterRegistry> meterRegistries) {
+        List<RequestPipeline> pipelines = meterRegistries.orderedStream()
+                .<RequestPipeline>map(ApplicationRequestMetricsPipeline::new)
+                .toList();
+        return new PipelineApplicationMediator(handlers, pipelines);
+    }
 
     @Bean
     ApplicationAuthorizer applicationAuthorizer(UserAccountRepository accounts) {
@@ -165,7 +188,7 @@ public class ApplicationCompositionConfiguration {
     }
 
     @Bean
-    QueryHandler<ListPendingPaymentsQuery, List<PaymentSummary>> listPendingPaymentsHandler(
+    QueryHandler<ListPendingPaymentsQuery, Page<PaymentSummary>> listPendingPaymentsHandler(
             ApplicationAuthorizer authorizer, LoanRepository loans, PaymentReadModelPort payments) {
         return new ListPendingPaymentsHandler(authorizer, loans, payments);
     }

@@ -23,6 +23,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.project.backend.infrastructure.persistence.JdbcTime.timestamp;
+import static com.project.backend.infrastructure.persistence.JdbcTime.instant;
+
 @Repository
 public final class JdbcReportedPaymentRepository implements ReportedPaymentRepository {
     private final JdbcTemplate jdbcTemplate;
@@ -65,7 +68,7 @@ public final class JdbcReportedPaymentRepository implements ReportedPaymentRepos
                 UPDATE loans.reported_payments
                 SET status = ?, updated_at = ?, version = version + 1
                 WHERE reported_payment_id = ?
-                """, payment.status().name(), now, payment.id().value());
+                """, payment.status().name(), timestamp(now), payment.id().value());
         if (updated == 0) {
             int inserted = jdbcTemplate.update("""
                     INSERT INTO loans.reported_payments
@@ -77,7 +80,7 @@ public final class JdbcReportedPaymentRepository implements ReportedPaymentRepos
                     """, payment.id().value(), payment.loanId().value(), payment.payerPersonId().value(),
                     payment.reportingAccountId().value(), payment.type().name(), payment.reportedAmount().amount(),
                     payment.reportedPaymentDate(), payment.externalReference(), payment.idempotencyKey(), payment.status().name(),
-                    payment.createdAt(), now);
+                    timestamp(payment.createdAt()), timestamp(now));
             if (inserted == 0) {
                 return findByIdempotencyKey(payment.idempotencyKey())
                         .orElseThrow(() -> new IllegalStateException("The conflicting idempotent payment could not be loaded"));
@@ -118,7 +121,7 @@ public final class JdbcReportedPaymentRepository implements ReportedPaymentRepos
                     money(resultSet.getBigDecimal("reported_amount"), currency),
                     resultSet.getObject("reported_payment_date", LocalDate.class), resultSet.getString("external_reference"),
                     resultSet.getObject("idempotency_key", UUID.class),
-                    status, resultSet.getObject("submitted_at", Instant.class), findProofs(paymentId),
+                    status, instant(resultSet, "submitted_at"), findProofs(paymentId),
                     findAllocations(paymentId, currency), review.validatedAmount(), review.rejectionReason(),
                     findReversalReason(paymentId));
         }, arguments);
@@ -168,7 +171,7 @@ public final class JdbcReportedPaymentRepository implements ReportedPaymentRepos
                     INSERT INTO loans.payment_evidence (payment_evidence_id, reported_payment_id, stored_object_id, created_at)
                     VALUES (?, ?, ?, ?)
                     ON CONFLICT (stored_object_id) DO NOTHING
-                    """, UUID.randomUUID(), payment.id().value(), proof.storedObjectId(), payment.createdAt());
+                    """, UUID.randomUUID(), payment.id().value(), proof.storedObjectId(), timestamp(payment.createdAt()));
         }
     }
 
@@ -184,7 +187,7 @@ public final class JdbcReportedPaymentRepository implements ReportedPaymentRepos
                     VALUES (?, ?, ?, ?, ?, ?)
                     """, UUID.randomUUID(), payment.id().value(),
                     allocation.installmentId() == null ? null : allocation.installmentId().value(),
-                    allocation.type().name(), allocation.amount().amount(), now);
+                    allocation.type().name(), allocation.amount().amount(), timestamp(now));
         }
     }
 
@@ -198,7 +201,7 @@ public final class JdbcReportedPaymentRepository implements ReportedPaymentRepos
                     FROM loans.loans loan JOIN loans.user_accounts account ON account.person_id = loan.lender_person_id
                     WHERE loan.loan_id = ?
                     ON CONFLICT (reported_payment_id, review_number) DO NOTHING
-                    """, UUID.randomUUID(), payment.id().value(), payment.validatedAmount().amount(), now, payment.loanId().value());
+                    """, UUID.randomUUID(), payment.id().value(), payment.validatedAmount().amount(), timestamp(now), payment.loanId().value());
         } else if (payment.status() == ReportedPaymentStatus.REJECTED && payment.rejectionReason() != null) {
             jdbcTemplate.update("""
                     INSERT INTO loans.payment_reviews
@@ -207,7 +210,7 @@ public final class JdbcReportedPaymentRepository implements ReportedPaymentRepos
                     FROM loans.loans loan JOIN loans.user_accounts account ON account.person_id = loan.lender_person_id
                     WHERE loan.loan_id = ?
                     ON CONFLICT (reported_payment_id, review_number) DO NOTHING
-                    """, UUID.randomUUID(), payment.id().value(), payment.rejectionReason(), now, payment.loanId().value());
+                    """, UUID.randomUUID(), payment.id().value(), payment.rejectionReason(), timestamp(now), payment.loanId().value());
         } else if (payment.status() == ReportedPaymentStatus.REVERSED && payment.reversalReason() != null) {
             jdbcTemplate.update("""
                     INSERT INTO loans.payment_reversals
@@ -216,7 +219,7 @@ public final class JdbcReportedPaymentRepository implements ReportedPaymentRepos
                     FROM loans.loans loan JOIN loans.user_accounts account ON account.person_id = loan.lender_person_id
                     WHERE loan.loan_id = ?
                     ON CONFLICT (reported_payment_id) DO NOTHING
-                    """, UUID.randomUUID(), payment.id().value(), payment.reversalReason(), now, payment.loanId().value());
+                    """, UUID.randomUUID(), payment.id().value(), payment.reversalReason(), timestamp(now), payment.loanId().value());
         }
     }
 
