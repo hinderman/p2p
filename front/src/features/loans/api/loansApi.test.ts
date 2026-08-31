@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { registerAuthenticatedSessionController } from '../../../core/http/authenticatedSessionController';
-import { createLoan, listLoans } from './loansApi';
+import { createLoan, getLoanDetail, listLoans } from './loansApi';
 import type { CreateLoanInput } from '../model/loan.types';
 
 let unregisterController: (() => void) | undefined;
@@ -98,5 +98,29 @@ describe('loans API', () => {
     expect(url).toBe('/api/v1/loans');
     expect(request.method).toBe('POST');
     expect(JSON.parse(request.body as string)).toEqual(input);
+  });
+
+  test('gets the contractual detail with exact installment balances', async () => {
+    const money = (amount: string) => ({ amount, currency: 'COP' });
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, {
+      loanId: 'loan-id', counterpartyPersonId: 'person-id', status: 'ACTIVE', createdAt: '2026-08-24T12:00:00Z',
+      originalPrincipal: money('1000.0000'), outstandingBalance: money('900.0000'),
+      terms: { versionNumber: 1, interestRatePercentage: '2.00000000', ratePeriod: 'MONTHLY_EFFECTIVE',
+        interestCalculationMethod: 'SIMPLE', dayCountBasis: 'THIRTY_360', amortizationMethod: 'FIXED_PAYMENT',
+        capitalPrepaymentPolicy: 'REDUCE_PAYMENT', installmentCount: 1, firstDueDate: '2026-09-24', timeZone: 'America/Bogota' },
+      paymentPlan: { paymentPlanId: 'plan-id', versionNumber: 1, reason: 'ORIGINAL', status: 'CURRENT', installments: [{
+        installmentId: 'installment-id', number: 1, dueDate: '2026-09-24', agreedPrincipal: money('1000.0000'),
+        agreedInterest: money('20.0000'), agreedFee: money('0.0000'), agreedTotal: money('1020.0000'),
+        paidPrincipal: money('100.0000'), paidInterest: money('20.0000'), paidFee: money('0.0000'),
+        paidTotal: money('120.0000'), outstandingPrincipal: money('900.0000'), outstandingInterest: money('0.0000'),
+        outstandingFee: money('0.0000'), outstandingTotal: money('900.0000'),
+      }] },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const detail = await getLoanDetail('loan/id');
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/loans/loan%2Fid');
+    expect(detail.paymentPlan?.installments[0].outstandingTotal).toEqual(money('900.0000'));
   });
 });

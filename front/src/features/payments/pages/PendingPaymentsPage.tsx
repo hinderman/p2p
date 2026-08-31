@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { AppPage } from '../../../shared/ui/AppPage';
+import { useLoanDetail } from '../../loans/model/useLoanDetail';
 import { reversePayment } from '../api/paymentsApi';
 import { FinancialConfirmation } from '../components/FinancialConfirmation';
 import { PendingPaymentsTable } from '../components/PendingPaymentsTable';
@@ -16,6 +17,7 @@ import './PaymentsPage.css';
 export function PendingPaymentsPage() {
   const { loanId = '' } = useParams();
   const { changePageSize, error, goToPage, page, payments, reload, status } = usePendingPayments(loanId);
+  const { detail } = useLoanDetail(loanId);
   const [selectedPayment, setSelectedPayment] = useState<PendingPayment | null>(null);
   const [processed, setProcessed] = useState<PaymentResult | null>(null);
   const [reversalPaymentId, setReversalPaymentId] = useState('');
@@ -88,7 +90,7 @@ export function PendingPaymentsPage() {
         </section>
       </div>
 
-      <ReviewPaymentModal payment={selectedPayment} onDismiss={() => setSelectedPayment(null)} onProcessed={handleProcessed} />
+      <ReviewPaymentModal installments={detail?.paymentPlan?.installments ?? []} payment={selectedPayment} onDismiss={() => setSelectedPayment(null)} onProcessed={handleProcessed} />
       <FinancialConfirmation confirmLabel="Confirmar reversión" danger isOpen={confirmReversal} isProcessing={isReversing} title="Confirma la reversión" onCancel={() => !isReversing && setConfirmReversal(false)} onConfirm={() => void confirmReverse()}>
         <p>Vas a reversar el pago <strong>#{reversalPaymentId.slice(0, 8)}</strong>.</p><p>Esta operación generará asientos compensatorios y modificará nuevamente el saldo financiero.</p><p>Motivo: {reversalReason.trim()}</p>
       </FinancialConfirmation>

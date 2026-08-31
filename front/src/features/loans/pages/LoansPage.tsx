@@ -57,11 +57,7 @@ export function LoansPage({ scope }: LoansPageProps) {
         </header>
 
         <LoanListContent
-          actionForLoan={(loan) => isLender
-            ? { label: 'Pagos pendientes', path: `/app/lender/${loan.loanId}/payments` }
-            : loan.status === 'ACTIVE'
-              ? { label: 'Reportar pago', path: `/app/payer/${loan.loanId}/payments/report` }
-              : undefined}
+          actionForLoan={(loan) => ({ label: 'Ver detalle', path: `/app/${scope}/loans/${loan.loanId}` })}
           error={status === 'error' ? error : null}
           isLoading={status === 'loading'}
           loans={loans}

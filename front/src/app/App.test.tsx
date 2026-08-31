@@ -81,7 +81,7 @@ test('loads the authenticated lender portfolio from the backend', async () => {
 
   expect(await screen.findByText('Saldo pendiente')).toBeInTheDocument();
   expect(screen.getByText('725.500,25 COP')).toBeInTheDocument();
-  expect(screen.getByText('Pagos pendientes')).toBeInTheDocument();
+  expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   expect(fetchMock).toHaveBeenCalledOnce();
   const [url, request] = fetchMock.mock.calls[0] as [string, RequestInit];
   expect(url).toBe('/api/v1/loans/lender');

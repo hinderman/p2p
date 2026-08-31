@@ -9,6 +9,10 @@ import com.project.backend.api.dto.request.PaymentScheduleRequest;
 import com.project.backend.api.dto.request.ReportPaymentRequest;
 import com.project.backend.api.dto.response.AuthenticatedSessionResponse;
 import com.project.backend.api.dto.response.LoanResponse;
+import com.project.backend.api.dto.response.LoanDetailResponse;
+import com.project.backend.api.dto.response.LoanTermsDetailResponse;
+import com.project.backend.api.dto.response.PaymentPlanDetailResponse;
+import com.project.backend.api.dto.response.InstallmentDetailResponse;
 import com.project.backend.api.dto.response.LoanSummaryResponse;
 import com.project.backend.api.dto.response.MoneyResponse;
 import com.project.backend.api.dto.response.PageResponse;
@@ -21,6 +25,7 @@ import com.project.backend.application.command.ReportPaymentCommand;
 import com.project.backend.application.dto.AuthenticatedSession;
 import com.project.backend.application.dto.LoanAccepted;
 import com.project.backend.application.dto.LoanCreated;
+import com.project.backend.application.dto.LoanDetail;
 import com.project.backend.application.dto.LoanSummary;
 import com.project.backend.application.dto.PaymentProcessed;
 import com.project.backend.application.dto.PaymentRegistered;
@@ -88,6 +93,28 @@ public final class ApiMapper {
     public static List<LoanSummaryResponse> responsesForLoans(List<LoanSummary> loans) {
         return loans.stream().map(loan -> new LoanSummaryResponse(loan.loanId().value(), loan.counterpartyPersonId().value(),
                 loan.status(), response(loan.originalPrincipal()), response(loan.outstandingBalance()), loan.createdAt())).toList();
+    }
+
+    public static LoanDetailResponse response(LoanDetail loan) {
+        var terms = loan.terms();
+        LoanTermsDetailResponse termsResponse = new LoanTermsDetailResponse(terms.versionNumber(),
+                terms.interestRatePercentage().toPlainString(), terms.ratePeriod(), terms.interestCalculationMethod(),
+                terms.dayCountBasis(), terms.amortizationMethod(), terms.capitalPrepaymentPolicy(),
+                terms.installmentCount(), terms.firstDueDate(), terms.timeZone());
+        PaymentPlanDetailResponse planResponse = loan.paymentPlan() == null ? null : new PaymentPlanDetailResponse(
+                loan.paymentPlan().paymentPlanId().value(), loan.paymentPlan().versionNumber(), loan.paymentPlan().reason(),
+                loan.paymentPlan().status(), loan.paymentPlan().installments().stream().map(installment ->
+                        new InstallmentDetailResponse(installment.installmentId().value(), installment.number(),
+                                installment.dueDate(), response(installment.agreedPrincipal()),
+                                response(installment.agreedInterest()), response(installment.agreedFee()),
+                                response(installment.agreedTotal()), response(installment.paidPrincipal()),
+                                response(installment.paidInterest()), response(installment.paidFee()),
+                                response(installment.paidTotal()), response(installment.outstandingPrincipal()),
+                                response(installment.outstandingInterest()), response(installment.outstandingFee()),
+                                response(installment.outstandingTotal()))).toList());
+        return new LoanDetailResponse(loan.loanId().value(), loan.counterpartyPersonId().value(), loan.status(),
+                response(loan.originalPrincipal()), response(loan.outstandingBalance()), loan.createdAt(),
+                termsResponse, planResponse);
     }
 
     public static PageResponse<PaymentSummaryResponse> responsesForPayments(Page<PaymentSummary> payments) {

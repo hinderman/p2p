@@ -1,0 +1,27 @@
+.loan-detail-page { display: grid; gap: 1.25rem; }
+.loan-detail-heading { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .7rem; }
+.loan-detail-heading ion-button { --border-radius: .7rem; margin: 0; }
+.loan-detail-heading p,.loan-detail-heading h1,.loan-detail-heading span { margin: 0; }
+.loan-detail-heading p { color: var(--ion-color-primary); font-size: .68rem; font-weight: 720; letter-spacing: .07em; text-transform: uppercase; }
+.loan-detail-heading h1 { margin-top: .2rem; font-size: clamp(1.55rem,5vw,2rem); letter-spacing: -.03em; }
+.loan-detail-heading span { display: block; margin-top: .35rem; color: var(--ion-color-medium-shade); font-size: .85rem; }
+.loan-detail-summary,.loan-terms-panel,.installment-panel { padding: 1.25rem; border: 1px solid rgba(var(--ion-text-color-rgb),.08); border-radius: 1rem; background: var(--ion-card-background,#fff); }
+.loan-detail-summary > div:first-child { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.loan-detail-summary small { color: var(--ion-color-medium); }
+.loan-detail-summary dl,.loan-terms-panel dl { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1rem; margin: 1.25rem 0 0; }
+.loan-detail-summary dt,.loan-terms-panel dt { color: var(--ion-color-medium); font-size: .7rem; }
+.loan-detail-summary dd,.loan-terms-panel dd { margin: .3rem 0 0; font-weight: 680; overflow-wrap: anywhere; }
+.loan-detail-summary dl div:first-child dd { font-size: 1.35rem; }
+.loan-detail-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
+.loan-terms-panel h2,.installment-panel h2,.installment-panel p { margin: 0; }
+.loan-terms-panel h2,.installment-panel h2 { font-size: 1rem; }
+.installment-panel { padding: 0; overflow: hidden; }
+.installment-panel > div:first-child { padding: 1.1rem 1.25rem; }
+.installment-panel p { margin-top: .25rem; color: var(--ion-color-medium); font-size: .74rem; }
+.installment-table-scroll { overflow-x: auto; }
+.installment-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+.installment-table th,.installment-table td { padding: .85rem 1rem; border-top: 1px solid rgba(var(--ion-text-color-rgb),.07); text-align: left; white-space: nowrap; }
+.installment-table th { color: var(--ion-color-medium); font-size: .66rem; text-transform: uppercase; }
+.installment-table .numeric { text-align: right; }
+.installment-table td small { display: block; margin-top: .2rem; font-size: .63rem; }
+@media (max-width:47.99rem) { .loan-detail-summary dl,.loan-terms-panel dl { grid-template-columns: 1fr; } .loan-detail-heading span { display:none; } }

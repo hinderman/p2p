@@ -207,6 +207,49 @@ class PostgreSqlPersistenceIT {
     }
 
     @Test
+    void projects_the_current_payment_plan_and_approved_component_balances_for_each_participant() {
+        Fixture fixture = insertLoanFixture();
+        UUID termId = jdbc.queryForObject("SELECT loan_term_id FROM loans.loan_terms WHERE loan_id = ?", UUID.class,
+                fixture.loanId());
+        UUID planId = UUID.randomUUID();
+        UUID installmentId = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO loans.payment_plans
+                (payment_plan_id, loan_term_id, version_number, status, reason, created_at, created_by_user_account_id)
+                VALUES (?, ?, 1, 'CURRENT', 'ORIGINAL', ?, ?)
+                """, planId, termId, Timestamp.from(fixture.createdAt()), fixture.lenderAccountId());
+        jdbc.update("""
+                INSERT INTO loans.installments
+                (installment_id, payment_plan_id, installment_number, due_date,
+                 agreed_principal, agreed_interest, agreed_fee, created_at)
+                VALUES (?, ?, 1, ?, 1000.0000, 10.0000, 5.0000, ?)
+                """, installmentId, planId, LocalDate.of(2026, 9, 20), Timestamp.from(fixture.createdAt()));
+        UUID paymentId = insertPayment(fixture, ReportedPaymentStatus.APPROVED, "110.0000",
+                Instant.parse("2026-08-20T12:15:00Z"));
+        jdbc.update("""
+                INSERT INTO loans.payment_allocations
+                (payment_allocation_id, reported_payment_id, installment_id, allocation_type, allocated_amount, created_at)
+                VALUES (?, ?, ?, 'INSTALLMENT_PRINCIPAL', 100.0000, ?),
+                       (?, ?, ?, 'INTEREST', 10.0000, ?)
+                """, UUID.randomUUID(), paymentId, installmentId, timestamp("2026-08-20T12:16:00Z"),
+                UUID.randomUUID(), paymentId, installmentId, timestamp("2026-08-20T12:16:00Z"));
+        JdbcLoanReadModelAdapter adapter = new JdbcLoanReadModelAdapter(jdbc);
+
+        var lenderDetail = adapter.findDetail(new LoanId(fixture.loanId()), new PersonId(fixture.lenderPersonId())).orElseThrow();
+        var payerDetail = adapter.findDetail(new LoanId(fixture.loanId()), new PersonId(fixture.payerPersonId())).orElseThrow();
+
+        assertEquals(fixture.payerPersonId(), lenderDetail.counterpartyPersonId().value());
+        assertEquals(fixture.lenderPersonId(), payerDetail.counterpartyPersonId().value());
+        assertEquals(new BigDecimal("900.0000"), payerDetail.outstandingBalance().amount());
+        var installment = payerDetail.paymentPlan().installments().getFirst();
+        assertEquals(installmentId, installment.installmentId().value());
+        assertEquals(new BigDecimal("100.0000"), installment.paidPrincipal().amount());
+        assertEquals(new BigDecimal("0.0000"), installment.outstandingInterest().amount());
+        assertEquals(new BigDecimal("5.0000"), installment.outstandingFee().amount());
+        assertTrue(adapter.findDetail(new LoanId(fixture.loanId()), new PersonId(UUID.randomUUID())).isEmpty());
+    }
+
+    @Test
     void executes_payment_count_lateral_join_and_limit_offset_in_postgresql() {
         Fixture fixture = insertLoanFixture();
         UUID first = insertPayment(fixture, ReportedPaymentStatus.PENDING_REVIEW, "80.0000",

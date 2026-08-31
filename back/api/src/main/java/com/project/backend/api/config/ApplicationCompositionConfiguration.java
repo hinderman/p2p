@@ -32,6 +32,7 @@ import com.project.backend.application.command.SignInHandler;
 import com.project.backend.application.dto.AuthenticatedSession;
 import com.project.backend.application.dto.LoanAccepted;
 import com.project.backend.application.dto.LoanCreated;
+import com.project.backend.application.dto.LoanDetail;
 import com.project.backend.application.dto.LoanSummary;
 import com.project.backend.application.dto.Page;
 import com.project.backend.application.dto.PaymentProcessed;
@@ -63,6 +64,8 @@ import com.project.backend.application.port.out.SignInRateLimitPort;
 import com.project.backend.application.port.out.UnitOfWorkPort;
 import com.project.backend.application.port.out.UuidGeneratorPort;
 import com.project.backend.application.query.ListLenderLoansHandler;
+import com.project.backend.application.query.GetLoanDetailHandler;
+import com.project.backend.application.query.GetLoanDetailQuery;
 import com.project.backend.application.query.ListLenderLoansQuery;
 import com.project.backend.application.query.ListPayerLoansHandler;
 import com.project.backend.application.query.ListPayerLoansQuery;
@@ -224,6 +227,12 @@ public class ApplicationCompositionConfiguration {
     QueryHandler<ListLenderLoansQuery, List<LoanSummary>> listLenderLoansHandler(
             ApplicationAuthorizer authorizer, LoanReadModelPort loans) {
         return new ListLenderLoansHandler(authorizer, loans);
+    }
+
+    @Bean
+    QueryHandler<GetLoanDetailQuery, LoanDetail> getLoanDetailHandler(
+            ApplicationAuthorizer authorizer, LoanReadModelPort loans) {
+        return new GetLoanDetailHandler(authorizer, loans);
     }
 
     @Bean

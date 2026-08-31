@@ -14,6 +14,46 @@ export type LoanSummary = {
 
 export type LoanScope = 'lender' | 'payer';
 
+export type InstallmentDetail = {
+  installmentId: string;
+  number: number;
+  dueDate: string;
+  agreedPrincipal: Money;
+  agreedInterest: Money;
+  agreedFee: Money;
+  agreedTotal: Money;
+  paidPrincipal: Money;
+  paidInterest: Money;
+  paidFee: Money;
+  paidTotal: Money;
+  outstandingPrincipal: Money;
+  outstandingInterest: Money;
+  outstandingFee: Money;
+  outstandingTotal: Money;
+};
+
+export type LoanDetail = LoanSummary & {
+  terms: {
+    versionNumber: number;
+    interestRatePercentage: string;
+    ratePeriod: RatePeriod;
+    interestCalculationMethod: InterestCalculationMethod;
+    dayCountBasis: DayCountBasis;
+    amortizationMethod: AmortizationMethod;
+    capitalPrepaymentPolicy: CapitalPrepaymentPolicy;
+    installmentCount: number;
+    firstDueDate: string;
+    timeZone: string;
+  };
+  paymentPlan: {
+    paymentPlanId: string;
+    versionNumber: number;
+    reason: string;
+    status: string;
+    installments: InstallmentDetail[];
+  } | null;
+};
+
 export type RatePeriod =
   | 'DAILY'
   | 'MONTHLY_NOMINAL'
