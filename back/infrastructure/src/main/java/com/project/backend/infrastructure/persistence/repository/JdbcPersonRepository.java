@@ -46,14 +46,17 @@ public final class JdbcPersonRepository implements PersonRepository {
     public Person save(Person person) {
         Instant now = Instant.now();
         int updated = jdbcTemplate.update("""
-                UPDATE loans.people SET status = ?, updated_at = ?, version = version + 1
+                UPDATE loans.people
+                SET first_name = ?, last_name = ?, status = ?, updated_at = ?, version = version + 1
                 WHERE person_id = ?
-                """, person.status().name(), timestamp(now), person.id().value());
+                """, person.firstName(), person.lastName(), person.status().name(), timestamp(now), person.id().value());
         if (updated == 0) {
             jdbcTemplate.update("""
-                    INSERT INTO loans.people (person_id, status, created_at, updated_at, version)
-                    VALUES (?, ?, ?, ?, 0)
-                    """, person.id().value(), person.status().name(), timestamp(person.createdAt()), timestamp(now));
+                    INSERT INTO loans.people
+                    (person_id, first_name, last_name, status, created_at, updated_at, version)
+                    VALUES (?, ?, ?, ?, ?, ?, 0)
+                    """, person.id().value(), person.firstName(), person.lastName(), person.status().name(),
+                    timestamp(person.createdAt()), timestamp(now));
             jdbcTemplate.update("""
                     INSERT INTO loans.person_emails
                     (person_email_id, person_id, original_email, normalized_email, is_primary, created_at)
@@ -80,6 +83,8 @@ public final class JdbcPersonRepository implements PersonRepository {
         List<Person> people = jdbcTemplate.query(sql, (resultSet, rowNumber) -> Person.rehydrate(
                 new PersonId(resultSet.getObject("person_id", UUID.class)),
                 new EmailAddress(resultSet.getString("normalized_email")),
+                resultSet.getString("first_name"),
+                resultSet.getString("last_name"),
                 PersonStatus.valueOf(resultSet.getString("status")),
                 instant(resultSet, "created_at")), argument);
         return people.stream().findFirst();

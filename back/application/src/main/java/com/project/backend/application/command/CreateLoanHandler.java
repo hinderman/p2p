@@ -1,7 +1,7 @@
 package com.project.backend.application.command;
 
 import com.project.backend.application.dto.LoanCreated;
-import com.project.backend.application.dto.InvitationEmailMessage;
+import com.project.backend.application.dto.OutboundEmailMessage;
 import com.project.backend.application.port.in.command.CommandHandler;
 import com.project.backend.application.port.out.UuidGeneratorPort;
 import com.project.backend.application.port.out.LoanInvitationPort;
@@ -89,7 +89,7 @@ public final class CreateLoanHandler implements CommandHandler<CreateLoanCommand
                     new LoanId(uuids.nextUuid()), lender.personId(), payer.id(), terms, now);
             loans.save(loan);
             var invitation = invitations.scheduleInvitation(loan.id(), terms.id(), command.payerEmail(), now);
-            outbox.enqueueInvitationEmail(new InvitationEmailMessage(
+            outbox.enqueueEmail(OutboundEmailMessage.loanInvitation(
                     invitation.invitationId(), invitation.recipientEmail(), invitation.rawToken()), now);
             persistEvents(loan.domainEvents(), loan);
             return new LoanCreated(loan.id(), loan.status());

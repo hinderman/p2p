@@ -5,6 +5,8 @@ import com.project.backend.api.rest.CurrentAccountResolver;
 import com.project.backend.api.rest.LoanController;
 import com.project.backend.api.rest.OnboardingController;
 import com.project.backend.api.rest.PaymentController;
+import com.project.backend.api.rest.RegistrationController;
+import com.project.backend.application.port.out.AccountVerificationPort;
 import com.project.backend.application.port.out.AuthenticationTokenIssuerPort;
 import com.project.backend.application.port.out.AuthenticationSessionPort;
 import com.project.backend.application.port.out.ClockPort;
@@ -16,6 +18,7 @@ import com.project.backend.application.port.out.PasswordVerifierPort;
 import com.project.backend.application.port.out.PasswordHashingPort;
 import com.project.backend.application.port.out.PaymentReadModelPort;
 import com.project.backend.application.port.out.PaymentAllocationValidationPort;
+import com.project.backend.application.port.out.RegistrationRateLimitPort;
 import com.project.backend.application.port.out.SignInRateLimitPort;
 import com.project.backend.application.port.out.UnitOfWorkPort;
 import com.project.backend.application.port.out.UuidGeneratorPort;
@@ -50,11 +53,14 @@ class ApplicationCompositionConfigurationTest {
             .withBean(FinancialLedgerPort.class, () -> mock(FinancialLedgerPort.class))
             .withBean(PaymentAllocationValidationPort.class, () -> mock(PaymentAllocationValidationPort.class))
             .withBean(SignInRateLimitPort.class, () -> mock(SignInRateLimitPort.class))
+            .withBean(RegistrationRateLimitPort.class, () -> mock(RegistrationRateLimitPort.class))
+            .withBean(AccountVerificationPort.class, () -> mock(AccountVerificationPort.class))
             .withBean(CurrentAccountResolver.class)
             .withBean(AuthenticationController.class)
             .withBean(LoanController.class)
             .withBean(OnboardingController.class)
-            .withBean(PaymentController.class);
+            .withBean(PaymentController.class)
+            .withBean(RegistrationController.class);
 
     @Test
     void wires_all_use_cases_and_controllers_without_spring_annotations_inward() {
@@ -64,6 +70,7 @@ class ApplicationCompositionConfigurationTest {
             assertThat(context).hasSingleBean(LoanController.class);
             assertThat(context).hasSingleBean(OnboardingController.class);
             assertThat(context).hasSingleBean(PaymentController.class);
+            assertThat(context).hasSingleBean(RegistrationController.class);
         });
     }
 }

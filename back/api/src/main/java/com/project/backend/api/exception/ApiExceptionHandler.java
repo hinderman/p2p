@@ -7,6 +7,7 @@ import com.project.backend.application.exception.IdempotencyConflictException;
 import com.project.backend.application.exception.OperationNotAllowedException;
 import com.project.backend.application.exception.ResourceNotFoundException;
 import com.project.backend.application.exception.RateLimitExceededException;
+import com.project.backend.application.exception.VerificationInvalidException;
 import com.project.backend.domain.exception.DomainRuleViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -42,6 +43,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InvitationInvalidException.class)
     ResponseEntity<ProblemDetail> handleInvalidInvitation(InvitationInvalidException exception) {
         return problem(HttpStatus.BAD_REQUEST, "invitation_invalid", "Invitation invalid", exception.getMessage());
+    }
+
+    @ExceptionHandler(VerificationInvalidException.class)
+    ResponseEntity<ProblemDetail> handleInvalidVerification(VerificationInvalidException exception) {
+        return problem(HttpStatus.BAD_REQUEST, "verification_invalid", "Verification invalid", exception.getMessage());
     }
 
     @ExceptionHandler(AccessDeniedException.class)

@@ -113,8 +113,8 @@ class CompletePayerOnboardingHandlerTest {
     private static OutboxEventsPort noOpOutbox() {
         return new OutboxEventsPort() {
             @Override public void enqueue(List<DomainEvent> events) { }
-            @Override public void enqueueInvitationEmail(
-                    com.project.backend.application.dto.InvitationEmailMessage invitation, Instant occurredAt) { }
+            @Override public void enqueueEmail(
+                    com.project.backend.application.dto.OutboundEmailMessage message, Instant occurredAt) { }
         };
     }
 

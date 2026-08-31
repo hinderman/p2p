@@ -37,6 +37,8 @@ public class ApiSecurityConfiguration {
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/sessions", "/api/v1/auth/sessions/refresh").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/onboarding/payer").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/registration/lender",
+                                "/api/v1/registration/verification", "/api/v1/registration/verification/resend").permitAll()
                         .requestMatchers("/actuator/health/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/auth/sessions").authenticated()

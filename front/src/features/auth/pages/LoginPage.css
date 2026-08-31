@@ -45,3 +45,11 @@
   width: 1.15rem;
   margin-right: 0.55rem;
 }
+
+.login-secondary {
+  margin: 0;
+  --border-radius: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}

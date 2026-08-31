@@ -2,6 +2,7 @@
 # Local tooling and machine-specific workspace files
 .languages/
 .tools/
+.claude/
 .graphify/
 .graphifyignore
 .npmrc

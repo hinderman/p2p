@@ -1,13 +1,13 @@
-# Backend — Clean Architecture and Domain-Driven Design
+﻿# Backend â€” Clean Architecture and Domain-Driven Design
 
 This Maven multi-module backend targets Java 25, Spring Boot 4.1.0, and PostgreSQL.
 
 ## Dependency rule
 
 ```text
-api ────────────────┐
-                   ├──> application ──> domain
-infrastructure ────┘
+api â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+                   â”œâ”€â”€> application â”€â”€> domain
+infrastructure â”€â”€â”€â”€â”˜
 ```
 
 - `domain`: pure Java business model, value objects, domain events, and repository ports.
@@ -22,13 +22,13 @@ The compiler enforces module boundaries. Architecture tests additionally prevent
 Start the local database:
 
 ```powershell
-C:\Proyect\.tools\db.ps1 start
+C:\MyProjects\.tools\db.ps1 start
 ```
 
 Activate the local toolchain, build, and run:
 
 ```powershell
-. C:\Proyect\.tools\env.ps1
+. C:\MyProjects\.tools\env.ps1
 mvnw.cmd clean install
 java -jar api\target\backend-api-0.0.1-SNAPSHOT.jar
 ```
@@ -85,6 +85,14 @@ Without `spring.profiles.active`, the application uses the `dev` profile.
 The `prod` profile provides no defaults. Missing database variables prevent startup rather than silently connecting to a development database.
 
 Authentication also requires `JWT_HMAC_SECRET`: a Base64-encoded secret containing at least 64 random bytes. Password hashes are verified with Argon2id; access tokens are short-lived HS512 JWTs and refresh tokens are random, opaque values persisted only as SHA-256 digests.
+
+## Transactional email delivery
+
+All outbound mail — loan invitations, account verification, and the
+already-registered notice — shares one encrypted outbox, one SMTP adapter, and
+the `app.email.*` configuration namespace. Adding a message kind means adding a
+value to `OutboundEmailKind` and its template; the delivery, retry, and
+encryption path is common. Environment-variable names are unchanged.
 
 ## Invitation email delivery
 
@@ -153,6 +161,57 @@ INVITATION_OUTBOX_ENCRYPTION_KEY=<Base64 32-byte AES-256 key>
 The `prod` profile requires the mail host, credentials, verified sender and public
 application URL instead of inheriting the localhost defaults.
 
+## Lender registration and email verification
+
+A lender opens their own account; no seeding is required.
+
+```http
+POST /api/v1/registration/lender
+POST /api/v1/registration/verification
+POST /api/v1/registration/verification/resend
+```
+
+Registration and resend always answer `202 Accepted` with an empty body, whether
+or not the address already has an account. That is what keeps the endpoint from
+being used to discover who holds an account. The address owner still learns what
+happened: an address that can hold a new account receives a verification link,
+and one that is already active receives a notice that someone tried to register
+with it. Nothing about the existing account changes in that case.
+
+An account created this way starts `PENDING_VERIFICATION` and cannot sign in.
+Redeeming the emailed link activates the account and the person, stamps
+`person_emails.verified_at`, and returns a session, so the person continues
+straight into the application. The link is single use, expires in 24 hours, and
+is superseded whenever a new one is issued. As with invitations, only the
+SHA-256 digest is stored, and the token travels in the URL fragment.
+
+Registering again with an address whose account is still pending replaces its
+credentials. Such an account has never been usable, so this is how someone who
+mistyped a password recovers; it gains an attacker nothing, because activation
+still requires the mailbox.
+
+Password strength is a domain rule (`PasswordPolicy`), applied by every use case
+that sets a password. Following NIST SP 800-63B, length is the primary control
+and composition rules are deliberately absent: 12–128 characters, at least five
+distinct characters, not a well-known password, and not derived from the address
+it protects. The well-known list is a small curated set; checking candidates
+against a breach corpus is the production upgrade and would replace only
+`PasswordPolicy.isWellKnown`.
+
+Registration and resend are throttled per address and per origin against
+`loans.registration_attempts`. Every attempt counts, not only failed ones,
+because the endpoint cannot report failure without revealing what it hides.
+
+| Variable | Development default |
+| --- | --- |
+| `ACCOUNT_VERIFICATION_PATH` | `/registro/verificacion` |
+| `REGISTRATION_RATE_LIMIT_WINDOW` | `PT1H` |
+| `REGISTRATION_RATE_LIMIT_EMAIL_ATTEMPTS` | `5` |
+| `REGISTRATION_RATE_LIMIT_IP_ATTEMPTS` | `20` |
+
+`V2__account_verification_and_registration.sql` adds `loans.account_verifications`
+and `loans.registration_attempts`.
+
 ## Financial integrity
 
 An approved payment is persisted in two complementary forms: the operational
@@ -214,9 +273,9 @@ For a new empty local database, run the base scripts once before starting the
 application:
 
 ```powershell
-. C:\Proyect\.tools\env.ps1
-psql -h localhost -p 5433 -U proyect -d proyectdb -f C:\Proyect\.database\00_loans_schema.sql
-psql -h localhost -p 5433 -U proyect -d proyectdb -f C:\Proyect\.database\01_reference_data.sql
+. C:\MyProjects\.tools\env.ps1
+psql -h localhost -p 5433 -U proyect -d proyectdb -f C:\MyProjects\p2p\.database\00_loans_schema.sql
+psql -h localhost -p 5433 -U proyect -d proyectdb -f C:\MyProjects\p2p\.database\01_reference_data.sql
 ```
 
 After the base schema exists, Flyway applies the additive migrations under

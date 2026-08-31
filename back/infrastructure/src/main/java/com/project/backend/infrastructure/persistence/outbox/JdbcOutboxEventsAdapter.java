@@ -1,8 +1,8 @@
 package com.project.backend.infrastructure.persistence.outbox;
 
-import com.project.backend.application.dto.InvitationEmailMessage;
+import com.project.backend.application.dto.OutboundEmailMessage;
 import com.project.backend.application.port.out.OutboxEventsPort;
-import com.project.backend.infrastructure.notification.InvitationEmailPayloadCipher;
+import com.project.backend.infrastructure.notification.OutboundEmailPayloadCipher;
 import com.project.backend.domain.event.DomainEvent;
 import com.project.backend.domain.event.LoanActivated;
 import com.project.backend.domain.event.LoanCreated;
@@ -25,11 +25,11 @@ import static com.project.backend.infrastructure.persistence.JdbcTime.timestamp;
 @Component
 public final class JdbcOutboxEventsAdapter implements OutboxEventsPort {
     private final JdbcTemplate jdbcTemplate;
-    private final InvitationEmailPayloadCipher invitationPayloadCipher;
+    private final OutboundEmailPayloadCipher emailPayloadCipher;
 
-    public JdbcOutboxEventsAdapter(JdbcTemplate jdbcTemplate, InvitationEmailPayloadCipher invitationPayloadCipher) {
+    public JdbcOutboxEventsAdapter(JdbcTemplate jdbcTemplate, OutboundEmailPayloadCipher emailPayloadCipher) {
         this.jdbcTemplate = jdbcTemplate;
-        this.invitationPayloadCipher = invitationPayloadCipher;
+        this.emailPayloadCipher = emailPayloadCipher;
     }
 
     @Override
@@ -46,12 +46,14 @@ public final class JdbcOutboxEventsAdapter implements OutboxEventsPort {
     }
 
     @Override
-    public void enqueueInvitationEmail(InvitationEmailMessage invitation, Instant occurredAt) {
+    public void enqueueEmail(OutboundEmailMessage message, Instant occurredAt) {
         jdbcTemplate.update("""
                 INSERT INTO loans.outbox_events
                 (outbox_event_id, aggregate_type, aggregate_id, event_type, payload, occurred_at)
-                VALUES (?, 'LoanInvitation', ?, 'LoanInvitationEmailRequested', CAST(? AS jsonb), ?)
-                """, UUID.randomUUID(), invitation.invitationId().value(), invitationPayloadCipher.encrypt(invitation), timestamp(occurredAt));
+                VALUES (?, ?, ?, ?, CAST(? AS jsonb), ?)
+                """, UUID.randomUUID(), OutboundEmailOutboxEvent.aggregateType(message.kind()), message.referenceId(),
+                OutboundEmailOutboxEvent.eventType(message.kind()), emailPayloadCipher.encrypt(message),
+                timestamp(occurredAt));
     }
 
     private static AggregateReference aggregateReference(DomainEvent event) {

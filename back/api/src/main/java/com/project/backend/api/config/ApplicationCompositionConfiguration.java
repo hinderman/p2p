@@ -13,6 +13,12 @@ import com.project.backend.application.command.RejectPaymentCommand;
 import com.project.backend.application.command.RejectPaymentHandler;
 import com.project.backend.application.command.RefreshSessionCommand;
 import com.project.backend.application.command.RefreshSessionHandler;
+import com.project.backend.application.command.RegisterLenderCommand;
+import com.project.backend.application.command.RegisterLenderHandler;
+import com.project.backend.application.command.ResendAccountVerificationCommand;
+import com.project.backend.application.command.ResendAccountVerificationHandler;
+import com.project.backend.application.command.VerifyAccountEmailCommand;
+import com.project.backend.application.command.VerifyAccountEmailHandler;
 import com.project.backend.application.command.ReportPaymentCommand;
 import com.project.backend.application.command.ReportPaymentHandler;
 import com.project.backend.application.command.RevokeSessionsCommand;
@@ -35,6 +41,7 @@ import com.project.backend.application.port.in.RequestHandler;
 import com.project.backend.application.port.in.RequestPipeline;
 import com.project.backend.application.port.in.command.CommandHandler;
 import com.project.backend.application.port.in.query.QueryHandler;
+import com.project.backend.application.port.out.AccountVerificationPort;
 import com.project.backend.application.port.out.AuthenticationTokenIssuerPort;
 import com.project.backend.application.port.out.AuthenticationSessionPort;
 import com.project.backend.application.port.out.ClockPort;
@@ -46,6 +53,7 @@ import com.project.backend.application.port.out.PasswordVerifierPort;
 import com.project.backend.application.port.out.PasswordHashingPort;
 import com.project.backend.application.port.out.PaymentReadModelPort;
 import com.project.backend.application.port.out.PaymentAllocationValidationPort;
+import com.project.backend.application.port.out.RegistrationRateLimitPort;
 import com.project.backend.application.port.out.SignInRateLimitPort;
 import com.project.backend.application.port.out.UnitOfWorkPort;
 import com.project.backend.application.port.out.UuidGeneratorPort;
@@ -113,6 +121,30 @@ public class ApplicationCompositionConfiguration {
             OutboxEventsPort outbox, UnitOfWorkPort unitOfWork) {
         return new CompletePayerOnboardingHandler(invitations, people, accounts, loans, passwordHasher, passwordVerifier,
                 paymentPlans, tokenIssuer, uuids, clock, outbox, unitOfWork);
+    }
+
+    @Bean
+    CommandHandler<RegisterLenderCommand, Void> registerLenderHandler(
+            PersonRepository people, UserAccountRepository accounts, AccountVerificationPort verifications,
+            PasswordHashingPort passwordHasher, RegistrationRateLimitPort rateLimit, UuidGeneratorPort uuids,
+            ClockPort clock, OutboxEventsPort outbox, UnitOfWorkPort unitOfWork) {
+        return new RegisterLenderHandler(people, accounts, verifications, passwordHasher, rateLimit, uuids, clock,
+                outbox, unitOfWork);
+    }
+
+    @Bean
+    CommandHandler<VerifyAccountEmailCommand, AuthenticatedSession> verifyAccountEmailHandler(
+            AccountVerificationPort verifications, UserAccountRepository accounts, PersonRepository people,
+            AuthenticationTokenIssuerPort tokenIssuer, ClockPort clock, OutboxEventsPort outbox,
+            UnitOfWorkPort unitOfWork) {
+        return new VerifyAccountEmailHandler(verifications, accounts, people, tokenIssuer, clock, outbox, unitOfWork);
+    }
+
+    @Bean
+    CommandHandler<ResendAccountVerificationCommand, Void> resendAccountVerificationHandler(
+            UserAccountRepository accounts, AccountVerificationPort verifications,
+            RegistrationRateLimitPort rateLimit, ClockPort clock, OutboxEventsPort outbox, UnitOfWorkPort unitOfWork) {
+        return new ResendAccountVerificationHandler(accounts, verifications, rateLimit, clock, outbox, unitOfWork);
     }
 
     @Bean

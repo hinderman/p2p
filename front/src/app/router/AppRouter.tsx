@@ -4,6 +4,7 @@ import { Navigate, Route } from 'react-router-dom';
 
 import { GuestOnly, LoginPage, RequireAuth } from '../../features/auth';
 import { PayerOnboardingPage } from '../../features/payer-onboarding';
+import { RegisterPage, VerifyEmailPage } from '../../features/registration';
 import { AuthenticatedShell } from '../shell/AuthenticatedShell';
 
 export function AppRouter() {
@@ -18,6 +19,16 @@ export function AppRouter() {
             </GuestOnly>
           }
         />
+        <Route
+          path="/registro"
+          element={
+            <GuestOnly>
+              <RegisterPage />
+            </GuestOnly>
+          }
+        />
+        {/* Reached from an emailed link, so it must work even with a stale session. */}
+        <Route path="/registro/verificacion" element={<VerifyEmailPage />} />
         <Route path="/onboarding/payer" element={<PayerOnboardingPage />} />
         <Route
           path="/app/*"
