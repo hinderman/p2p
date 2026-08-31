@@ -13,14 +13,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ApiError } from '../../../core/http/apiClient';
 import { AppPage } from '../../../shared/ui/AppPage';
 import { useAuth } from '../../auth';
-import { reportPayment } from '../api/paymentsApi';
+import { reportPayment, uploadPaymentProof } from '../api/paymentsApi';
 import { FinancialConfirmation } from '../components/FinancialConfirmation';
 import { completePaymentAttempt, resolvePaymentAttempt } from '../model/paymentIdempotency';
 import { formatPaymentMoney, isIsoCalendarDate, isPositiveMoney, isUuid, paymentErrorMessage } from '../model/paymentPresentation';
 import type { PaymentProof, PaymentResult, PaymentType, ReportPaymentInput } from '../model/payment.types';
 import './PaymentsPage.css';
 
-type ProofDraft = PaymentProof & { fileName?: string; isHashing?: boolean };
+type ProofDraft = PaymentProof & { fileName?: string; isUploading?: boolean; uploadError?: string };
 type ReportErrors = Partial<Record<'amount' | 'currency' | 'date' | 'proofs', string>>;
 
 function today(): string {
@@ -53,20 +53,30 @@ export function ReportPaymentPage() {
     if (errors.proofs) setErrors((current) => ({ ...current, proofs: undefined }));
   }
 
-  async function calculateFileHash(index: number, file?: File) {
+  async function uploadProof(index: number, file?: File) {
     if (!file) return;
     if (file.size > 15 * 1024 * 1024) {
-      setErrors((current) => ({ ...current, proofs: 'El archivo supera 15 MB para el cálculo local.' }));
+      setErrors((current) => ({ ...current, proofs: 'El comprobante supera el límite de 15 MB.' }));
       return;
     }
-    updateProof(index, { fileName: file.name, isHashing: true });
+    updateProof(index, { storedObjectId: '', sha256: '', fileName: file.name, isUploading: true, uploadError: undefined });
     try {
-      const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
-      const sha256 = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-      updateProof(index, { sha256, isHashing: false });
-    } catch {
-      updateProof(index, { isHashing: false });
-      setErrors((current) => ({ ...current, proofs: 'No fue posible calcular el hash del archivo.' }));
+      const stored = await uploadPaymentProof(file);
+      updateProof(index, {
+        storedObjectId: stored.storedObjectId,
+        sha256: stored.sha256,
+        fileName: stored.originalName,
+        isUploading: false,
+      });
+    } catch (error) {
+      const message = error instanceof ApiError && error.code === 'malware_detected'
+        ? 'El archivo fue rechazado por el análisis de seguridad.'
+        : error instanceof ApiError && error.code === 'file_scan_unavailable'
+          ? 'El antivirus no está disponible. Intenta de nuevo en unos minutos.'
+          : error instanceof ApiError && error.code === 'invalid_payment_proof'
+            ? 'Solo puedes subir PDF, PNG o JPEG válidos de hasta 15 MB.'
+            : 'No fue posible cargar el comprobante.';
+      updateProof(index, { isUploading: false, uploadError: message });
     }
   }
 
@@ -82,9 +92,10 @@ export function ReportPaymentPage() {
     }));
     if (
       normalizedProofs.length === 0 ||
+      proofs.some((proof) => proof.isUploading || proof.uploadError) ||
       normalizedProofs.some((proof) => !isUuid(proof.storedObjectId) || !/^[a-f0-9]{64}$/.test(proof.sha256)) ||
       new Set(normalizedProofs.map((proof) => proof.storedObjectId)).size !== normalizedProofs.length
-    ) nextErrors.proofs = 'Cada comprobante necesita un UUID único y un SHA-256 de 64 caracteres.';
+    ) nextErrors.proofs = 'Espera a que todos los comprobantes terminen de cargar correctamente.';
     setErrors(nextErrors);
     setRequestError(null);
     if (Object.keys(nextErrors).length > 0 || !isUuid(loanId)) return;
@@ -151,13 +162,12 @@ export function ReportPaymentPage() {
             <IonInput className={errors.date ? 'ion-invalid ion-touched' : ''} errorText={errors.date} fill="outline" label="Fecha del pago" labelPlacement="stacked" type="date" value={paymentDate} onIonInput={(event) => setPaymentDate(event.detail.value ?? '')} />
             <IonInput fill="outline" label="Referencia externa (opcional)" labelPlacement="stacked" maxlength={150} value={externalReference} onIonInput={(event) => setExternalReference(event.detail.value ?? '')} />
           </div></section>
-          <section><div className="payment-section-title"><div><h2>Comprobantes</h2><p>Referencia de un archivo previamente almacenado y escaneado.</p></div><IonButton fill="clear" type="button" onClick={() => setProofs((current) => [...current, emptyProof()])}><IonIcon icon={addOutline} slot="start" />Agregar</IonButton></div>
+          <section><div className="payment-section-title"><div><h2>Comprobantes</h2><p>PDF, PNG o JPEG de hasta 15 MB. Cada archivo se analiza antes de aceptarse.</p></div><IonButton fill="clear" type="button" onClick={() => setProofs((current) => [...current, emptyProof()])}><IonIcon icon={addOutline} slot="start" />Agregar</IonButton></div>
             <div className="proof-list">{proofs.map((proof, index) => <div className="proof-row" key={index}>
-              <IonInput fill="outline" label="ID del archivo almacenado" labelPlacement="stacked" placeholder="UUID" value={proof.storedObjectId} onIonInput={(event) => updateProof(index, { storedObjectId: event.detail.value ?? '' })} />
-              <IonInput fill="outline" label="SHA-256" labelPlacement="stacked" maxlength={64} value={proof.sha256} onIonInput={(event) => updateProof(index, { sha256: event.detail.value ?? '' })} />
-              <label className="proof-file"><span>{proof.isHashing ? <IonSpinner name="crescent" /> : 'Calcular hash desde archivo'}</span><input disabled={proof.isHashing} type="file" onChange={(event) => void calculateFileHash(index, event.currentTarget.files?.[0])} /></label>
-              {proof.fileName && <small>{proof.fileName} · el archivo no se carga desde esta pantalla</small>}
-              {proofs.length > 1 && <IonButton aria-label={`Eliminar comprobante ${index + 1}`} color="danger" fill="clear" type="button" onClick={() => setProofs((current) => current.filter((_, position) => position !== index))}><IonIcon icon={trashOutline} slot="icon-only" /></IonButton>}
+              <label className={`proof-file ${proof.uploadError ? 'invalid' : ''}`}><span>{proof.isUploading ? <><IonSpinner name="crescent" /> Analizando archivo…</> : proof.storedObjectId ? 'Reemplazar comprobante' : 'Seleccionar comprobante'}</span><input accept="application/pdf,image/png,image/jpeg" disabled={proof.isUploading} type="file" onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; void uploadProof(index, file); }} /></label>
+              {proof.fileName && <small>{proof.fileName}{proof.storedObjectId ? ' · análisis completado' : ''}</small>}
+              {proof.uploadError && <p className="payment-field-error" role="alert">{proof.uploadError}</p>}
+              {proofs.length > 1 && <IonButton aria-label={`Eliminar comprobante ${index + 1}`} color="danger" disabled={proof.isUploading} fill="clear" type="button" onClick={() => setProofs((current) => current.filter((_, position) => position !== index))}><IonIcon icon={trashOutline} slot="icon-only" /></IonButton>}
             </div>)}</div>{errors.proofs && <p className="payment-field-error">{errors.proofs}</p>}
           </section>
           {requestError && <div className="payment-error" role="alert"><IonIcon icon={alertCircleOutline} /><span>{requestError}</span></div>}

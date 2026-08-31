@@ -4,11 +4,13 @@ import com.project.backend.api.dto.request.ApprovePaymentRequest;
 import com.project.backend.api.dto.request.ReasonRequest;
 import com.project.backend.api.dto.request.ReportPaymentRequest;
 import com.project.backend.api.dto.response.PaymentResponse;
+import com.project.backend.api.dto.response.StoredPaymentProofResponse;
 import com.project.backend.api.mapper.ApiMapper;
 import com.project.backend.application.command.ApprovePaymentCommand;
 import com.project.backend.application.command.RejectPaymentCommand;
 import com.project.backend.application.command.ReportPaymentCommand;
 import com.project.backend.application.command.ReversePaymentCommand;
+import com.project.backend.application.command.UploadPaymentProofCommand;
 import com.project.backend.application.port.in.ApplicationMediator;
 import com.project.backend.domain.valueobject.LoanId;
 import com.project.backend.domain.valueobject.ReportedPaymentId;
@@ -17,12 +19,18 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 import java.security.Principal;
 import java.util.UUID;
@@ -49,6 +57,18 @@ public class PaymentController {
             Principal principal) {
         return ApiMapper.response(mediator.send(ApiMapper.toCommand(
                 request, new LoanId(loanId), currentAccount.requireAccountId(principal), UUID.fromString(idempotencyKey))));
+    }
+
+    @PostMapping(path = "/payment-proofs", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Upload a payment proof",
+            description = "Requires the PAYER role. Accepts a PDF, PNG, or JPEG up to 15 MB and returns only after malware scanning succeeds.")
+    public StoredPaymentProofResponse uploadProof(
+            @RequestPart("file") MultipartFile file,
+            Principal principal) throws IOException {
+        return StoredPaymentProofResponse.from(mediator.send(new UploadPaymentProofCommand(
+                currentAccount.requireAccountId(principal), file.getOriginalFilename() == null ? "" : file.getOriginalFilename(),
+                file.getContentType(), file.getBytes())));
     }
 
     @PostMapping(path = "/payments/{paymentId}/approval", consumes = MediaType.APPLICATION_JSON_VALUE)

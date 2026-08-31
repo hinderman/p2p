@@ -11,6 +11,13 @@ export type PaymentProof = {
   sha256: string;
 };
 
+export type StoredPaymentProof = PaymentProof & {
+  originalName: string;
+  contentType: string;
+  sizeBytes: number;
+  scanStatus: 'SAFE';
+};
+
 export type ReportPaymentInput = {
   paymentType: PaymentType;
   reportedAmount: PaymentMoney;

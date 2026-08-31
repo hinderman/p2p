@@ -7,6 +7,7 @@ import type {
   PaymentResult,
   PendingPayment,
   ReportPaymentInput,
+  StoredPaymentProof,
 } from '../model/payment.types';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -33,6 +34,30 @@ function parsePaymentResult(value: unknown): PaymentResult {
     throw new ApiError(200, 'invalid_response', 'The server returned an invalid payment result');
   }
   return { reportedPaymentId: value.reportedPaymentId, status: value.status };
+}
+
+function parseStoredPaymentProof(value: unknown): StoredPaymentProof {
+  if (
+    !isRecord(value) ||
+    typeof value.storedObjectId !== 'string' ||
+    typeof value.originalName !== 'string' ||
+    typeof value.contentType !== 'string' ||
+    typeof value.sizeBytes !== 'number' ||
+    typeof value.sha256 !== 'string' ||
+    value.scanStatus !== 'SAFE'
+  ) throw new ApiError(201, 'invalid_response', 'The server returned an invalid payment proof');
+  return value as StoredPaymentProof;
+}
+
+export async function uploadPaymentProof(file: File): Promise<StoredPaymentProof> {
+  const body = new FormData();
+  body.append('file', file, file.name);
+  return parseStoredPaymentProof(await apiClient<unknown>('/api/v1/payment-proofs', {
+    body,
+    globalError: false,
+    globalLoading: false,
+    method: 'POST',
+  }));
 }
 
 function parsePendingPayment(value: unknown): PendingPayment | null {

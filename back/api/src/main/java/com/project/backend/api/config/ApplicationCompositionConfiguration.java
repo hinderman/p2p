@@ -19,6 +19,8 @@ import com.project.backend.application.command.ResendAccountVerificationCommand;
 import com.project.backend.application.command.ResendAccountVerificationHandler;
 import com.project.backend.application.command.VerifyAccountEmailCommand;
 import com.project.backend.application.command.VerifyAccountEmailHandler;
+import com.project.backend.application.command.UploadPaymentProofCommand;
+import com.project.backend.application.command.UploadPaymentProofHandler;
 import com.project.backend.application.command.ReportPaymentCommand;
 import com.project.backend.application.command.ReportPaymentHandler;
 import com.project.backend.application.command.RevokeSessionsCommand;
@@ -35,6 +37,7 @@ import com.project.backend.application.dto.Page;
 import com.project.backend.application.dto.PaymentProcessed;
 import com.project.backend.application.dto.PaymentRegistered;
 import com.project.backend.application.dto.PaymentSummary;
+import com.project.backend.application.dto.StoredPaymentProof;
 import com.project.backend.application.mediator.PipelineApplicationMediator;
 import com.project.backend.application.port.in.ApplicationMediator;
 import com.project.backend.application.port.in.RequestHandler;
@@ -54,6 +57,8 @@ import com.project.backend.application.port.out.PasswordHashingPort;
 import com.project.backend.application.port.out.PaymentReadModelPort;
 import com.project.backend.application.port.out.PaymentAllocationValidationPort;
 import com.project.backend.application.port.out.RegistrationRateLimitPort;
+import com.project.backend.application.port.out.MalwareScannerPort;
+import com.project.backend.application.port.out.StoredObjectPort;
 import com.project.backend.application.port.out.SignInRateLimitPort;
 import com.project.backend.application.port.out.UnitOfWorkPort;
 import com.project.backend.application.port.out.UuidGeneratorPort;
@@ -177,8 +182,16 @@ public class ApplicationCompositionConfiguration {
     @Bean
     CommandHandler<ReportPaymentCommand, PaymentRegistered> reportPaymentHandler(
             ApplicationAuthorizer authorizer, LoanRepository loans, ReportedPaymentRepository payments,
-            UuidGeneratorPort uuids, ClockPort clock, OutboxEventsPort outbox, UnitOfWorkPort unitOfWork) {
-        return new ReportPaymentHandler(authorizer, loans, payments, uuids, clock, outbox, unitOfWork);
+            StoredObjectPort storedObjects, UuidGeneratorPort uuids, ClockPort clock,
+            OutboxEventsPort outbox, UnitOfWorkPort unitOfWork) {
+        return new ReportPaymentHandler(authorizer, loans, payments, storedObjects, uuids, clock, outbox, unitOfWork);
+    }
+
+    @Bean
+    CommandHandler<UploadPaymentProofCommand, StoredPaymentProof> uploadPaymentProofHandler(
+            ApplicationAuthorizer authorizer, StoredObjectPort storedObjects, MalwareScannerPort scanner,
+            UuidGeneratorPort uuids, ClockPort clock) {
+        return new UploadPaymentProofHandler(authorizer, storedObjects, scanner, uuids, clock);
     }
 
     @Bean

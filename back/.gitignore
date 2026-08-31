@@ -21,6 +21,7 @@ Thumbs.db
 # Logs y temporales
 *.log
 *.pid
+.data/
 
 # Configuracion local con secretos (nunca versionar)
 application-local.yml

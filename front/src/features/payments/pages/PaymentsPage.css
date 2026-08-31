@@ -127,6 +127,10 @@
   border-radius: 0.8rem;
 }
 
+.proof-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 .proof-file {
   display: grid;
   min-height: 2.8rem;
@@ -142,6 +146,17 @@
   cursor: pointer;
 }
 
+.proof-file.invalid {
+  border-color: rgba(var(--ion-color-danger-rgb), 0.55);
+  color: var(--ion-color-danger);
+}
+
+.proof-file span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .proof-file input {
   position: absolute;
   width: 1px;
@@ -155,9 +170,12 @@
 }
 
 .proof-row small {
-  grid-column: 1 / -1;
   color: var(--ion-color-medium);
   font-size: 0.67rem;
+}
+
+.proof-row .payment-field-error {
+  grid-column: 1 / -1;
 }
 
 .payment-field-error {

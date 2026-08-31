@@ -51,6 +51,14 @@ falla temporal de red o del servidor no la descarta.
 Los problemas RFC devueltos por el backend se normalizan como `ApiError`,
 conservando `status`, `code`, `detail` y las violaciones por campo.
 
+### Comprobantes de pago
+
+La pantalla de reporte carga cada PDF, PNG o JPEG al endpoint autenticado de
+comprobantes. El usuario ya no escribe UUID ni hashes manualmente: la API devuelve
+el identificador y el SHA-256 después del análisis de seguridad, y esos valores se
+incorporan al reporte. El formulario no permite continuar mientras una carga esté
+en curso o haya fallado.
+
 ### Onboarding del pagador
 
 La invitación abre `/onboarding/payer#invitationToken=<token>`. La aplicación
