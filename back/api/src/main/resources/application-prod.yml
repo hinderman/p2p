@@ -16,6 +16,16 @@ spring:
       "mail.smtp.starttls.enable": ${MAIL_SMTP_STARTTLS_ENABLE:true}
 
 app:
+  payment-proof:
+    storage:
+      root: ${PAYMENT_PROOF_STORAGE_ROOT}
+    scanner:
+      # Production has no allow-all fallback: clamd must be configured and reachable.
+      mode: clamav
+      clamav:
+        host: ${CLAMAV_HOST}
+        port: ${CLAMAV_PORT:3310}
+        timeout: ${CLAMAV_TIMEOUT:PT10S}
   email:
     from: ${INVITATION_EMAIL_FROM}
     sender-name: ${INVITATION_EMAIL_SENDER_NAME}

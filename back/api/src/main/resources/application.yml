@@ -46,6 +46,11 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
 
+  servlet:
+    multipart:
+      max-file-size: 15MB
+      max-request-size: 16MB
+
   # Mailpit listens here in local development. In deployed environments these
   # values are overridden with the Brevo SMTP relay and a verified sender.
   mail:
@@ -83,6 +88,16 @@ springdoc:
     enabled: false
 
 app:
+  payment-proof:
+    storage:
+      root: ${PAYMENT_PROOF_STORAGE_ROOT:.data/payment-proofs}
+    scanner:
+      mode: ${PAYMENT_PROOF_SCANNER_MODE:trusted-development}
+      clamav:
+        host: ${CLAMAV_HOST:localhost}
+        port: ${CLAMAV_PORT:3310}
+        timeout: ${CLAMAV_TIMEOUT:PT10S}
+
   # Transactional email: loan invitations, account verification, and the notice
   # sent when someone registers an address that already has an account.
   email:

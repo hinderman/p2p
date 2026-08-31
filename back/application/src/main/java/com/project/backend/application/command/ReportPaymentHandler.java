@@ -1,6 +1,8 @@
 package com.project.backend.application.command;
 
 import com.project.backend.application.dto.PaymentRegistered;
+import com.project.backend.application.dto.StoredObjectScanStatus;
+import com.project.backend.application.exception.InvalidPaymentProofException;
 import com.project.backend.application.exception.ResourceNotFoundException;
 import com.project.backend.application.exception.OperationNotAllowedException;
 import com.project.backend.application.exception.IdempotencyConflictException;
@@ -9,6 +11,7 @@ import com.project.backend.application.port.out.UuidGeneratorPort;
 import com.project.backend.application.port.out.OutboxEventsPort;
 import com.project.backend.application.port.out.ClockPort;
 import com.project.backend.application.port.out.UnitOfWorkPort;
+import com.project.backend.application.port.out.StoredObjectPort;
 import com.project.backend.application.security.ApplicationAuthorizer;
 import com.project.backend.domain.identity.UserRole;
 import com.project.backend.domain.loan.LoanStatus;
@@ -26,6 +29,7 @@ public final class ReportPaymentHandler implements CommandHandler<ReportPaymentC
     private final ApplicationAuthorizer authorizer;
     private final LoanRepository loans;
     private final ReportedPaymentRepository payments;
+    private final StoredObjectPort storedObjects;
     private final UuidGeneratorPort uuids;
     private final ClockPort clock;
     private final OutboxEventsPort outbox;
@@ -35,6 +39,7 @@ public final class ReportPaymentHandler implements CommandHandler<ReportPaymentC
             ApplicationAuthorizer authorizer,
             LoanRepository loans,
             ReportedPaymentRepository payments,
+            StoredObjectPort storedObjects,
             UuidGeneratorPort uuids,
             ClockPort clock,
             OutboxEventsPort outbox,
@@ -42,6 +47,7 @@ public final class ReportPaymentHandler implements CommandHandler<ReportPaymentC
         this.authorizer = Objects.requireNonNull(authorizer, "El authorizer es obligatorio");
         this.loans = Objects.requireNonNull(loans, "The loan repository is required");
         this.payments = Objects.requireNonNull(payments, "El repositorio de payments es obligatorio");
+        this.storedObjects = Objects.requireNonNull(storedObjects, "The stored object port is required");
         this.uuids = Objects.requireNonNull(uuids, "El generador de UUID es obligatorio");
         this.clock = Objects.requireNonNull(clock, "El clock es obligatorio");
         this.outbox = Objects.requireNonNull(outbox, "El outbox es obligatorio");
@@ -71,6 +77,7 @@ public final class ReportPaymentHandler implements CommandHandler<ReportPaymentC
                 throw new OperationNotAllowedException(
                         "PAYOFF is unavailable until the settlement workflow can close the loan and its payment plan atomically");
             }
+            validateProofs(command);
             Instant now = clock.now();
             ReportedPayment payment = ReportedPayment.create(
                     new ReportedPaymentId(uuids.nextUuid()), loan.id(), payer.personId(), payer.id(),
@@ -86,6 +93,25 @@ public final class ReportPaymentHandler implements CommandHandler<ReportPaymentC
             payment.pullEvents();
             return new PaymentRegistered(payment.id(), payment.status());
         });
+    }
+
+    private void validateProofs(ReportPaymentCommand command) {
+        for (var proof : command.proofs()) {
+            var stored = storedObjects.findByIdForUpdate(proof.storedObjectId())
+                    .orElseThrow(() -> new InvalidPaymentProofException("The payment proof does not exist"));
+            if (!stored.uploadedBy().equals(command.payerAccountId())) {
+                throw new InvalidPaymentProofException("The payment proof belongs to another account");
+            }
+            if (stored.scanStatus() != StoredObjectScanStatus.SAFE) {
+                throw new InvalidPaymentProofException("The payment proof has not passed malware scanning");
+            }
+            if (stored.attached()) {
+                throw new InvalidPaymentProofException("The payment proof is already attached to a payment");
+            }
+            if (!stored.sha256().equals(proof.sha256())) {
+                throw new InvalidPaymentProofException("The payment proof digest does not match the stored object");
+            }
+        }
     }
 
     private PaymentRegistered replayOrRejectChangedSubmission(ReportedPayment payment, ReportPaymentCommand command) {

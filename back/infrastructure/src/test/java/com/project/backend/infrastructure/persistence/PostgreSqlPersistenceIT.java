@@ -2,6 +2,8 @@ package com.project.backend.infrastructure.persistence;
 
 import com.project.backend.application.dto.OutboundEmailMessage;
 import com.project.backend.application.dto.PageRequest;
+import com.project.backend.application.dto.StoredObjectScanStatus;
+import com.project.backend.application.dto.StoredObjectUpload;
 import com.project.backend.domain.financial.FinancialJournal;
 import com.project.backend.domain.financial.FinancialJournalType;
 import com.project.backend.domain.financial.LedgerAccount;
@@ -20,12 +22,15 @@ import com.project.backend.infrastructure.persistence.financial.JdbcFinancialLed
 import com.project.backend.infrastructure.persistence.outbox.JdbcOutboxEventsAdapter;
 import com.project.backend.infrastructure.persistence.query.JdbcLoanReadModelAdapter;
 import com.project.backend.infrastructure.persistence.query.JdbcPaymentReadModelAdapter;
+import com.project.backend.infrastructure.storage.LocalStoredObjectAdapter;
+import com.project.backend.infrastructure.storage.PaymentProofStorageProperties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.TransactionStatus;
@@ -33,6 +38,8 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.math.BigDecimal;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -49,6 +56,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Executes production SQL against PostgreSQL 18, never against an in-memory substitute. */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PostgreSqlPersistenceIT {
+    @TempDir
+    Path storageRoot;
     private EphemeralPostgreSql database;
     private JdbcTemplate jdbc;
     private DataSourceTransactionManager transactions;
@@ -99,6 +108,30 @@ class PostgreSqlPersistenceIT {
         assertEquals(2L, jdbc.queryForObject("SELECT COUNT(*) FROM loans.roles", Long.class));
         assertEquals(Boolean.TRUE, jdbc.queryForObject(
                 "SELECT success FROM public.flyway_schema_history WHERE version = '1'", Boolean.class));
+    }
+
+    @Test
+    void stages_and_releases_a_safe_payment_proof_with_real_postgresql_metadata() throws Exception {
+        Fixture fixture = insertLoanFixture();
+        UUID objectId = UUID.randomUUID();
+        byte[] content = "%PDF-integration-proof".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        LocalStoredObjectAdapter adapter = new LocalStoredObjectAdapter(jdbc,
+                new PaymentProofStorageProperties(storageRoot));
+
+        adapter.stage(new StoredObjectUpload(objectId,
+                new com.project.backend.domain.valueobject.UserAccountId(fixture.payerAccountId()),
+                "comprobante.pdf", "application/pdf", content, "a".repeat(64), fixture.createdAt()));
+        assertEquals(StoredObjectScanStatus.PENDING,
+                adapter.findByIdForUpdate(objectId).orElseThrow().scanStatus());
+
+        adapter.markSafe(objectId);
+
+        var stored = adapter.findByIdForUpdate(objectId).orElseThrow();
+        assertEquals(StoredObjectScanStatus.SAFE, stored.scanStatus());
+        assertEquals(fixture.payerAccountId(), stored.uploadedBy().value());
+        assertFalse(stored.attached());
+        assertTrue(Files.exists(storageRoot.resolve(
+                "payment-proofs/" + objectId.toString().substring(0, 2) + "/" + objectId)));
     }
 
     @Test

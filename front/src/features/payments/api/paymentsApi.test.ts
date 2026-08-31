@@ -7,6 +7,7 @@ import {
   rejectPayment,
   reportPayment,
   reversePayment,
+  uploadPaymentProof,
 } from './paymentsApi';
 import type { ApprovePaymentInput, ReportPaymentInput } from '../model/payment.types';
 
@@ -37,6 +38,24 @@ afterEach(() => {
 });
 
 describe('payments API', () => {
+  test('uploads a proof as multipart data and accepts only a SAFE response', async () => {
+    const payload = {
+      storedObjectId: 'd98d8980-5be6-4439-ab0d-a12da2a9da5b',
+      originalName: 'comprobante.pdf', contentType: 'application/pdf', sizeBytes: 12,
+      sha256: 'a'.repeat(64), scanStatus: 'SAFE',
+    };
+    const fetchMock = vi.fn().mockResolvedValue(response(payload));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(uploadPaymentProof(new File(['%PDF-proof'], 'comprobante.pdf', { type: 'application/pdf' })))
+      .resolves.toEqual(payload);
+    const [url, request] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/payment-proofs');
+    expect(request.method).toBe('POST');
+    expect(request.body).toBeInstanceOf(FormData);
+    expect(new Headers(request.headers).has('content-type')).toBe(false);
+  });
+
   test('reports a payment with its stable idempotency header and proofs', async () => {
     const input: ReportPaymentInput = {
       paymentType: 'INSTALLMENT',

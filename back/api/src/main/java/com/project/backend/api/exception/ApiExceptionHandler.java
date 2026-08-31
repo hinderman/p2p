@@ -3,6 +3,9 @@ package com.project.backend.api.exception;
 import com.project.backend.application.exception.AccessDeniedException;
 import com.project.backend.application.exception.AuthenticationFailedException;
 import com.project.backend.application.exception.InvitationInvalidException;
+import com.project.backend.application.exception.InvalidPaymentProofException;
+import com.project.backend.application.exception.MalwareDetectedException;
+import com.project.backend.application.exception.FileScanUnavailableException;
 import com.project.backend.application.exception.IdempotencyConflictException;
 import com.project.backend.application.exception.OperationNotAllowedException;
 import com.project.backend.application.exception.ResourceNotFoundException;
@@ -18,6 +21,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -75,6 +79,21 @@ public class ApiExceptionHandler {
         return problem(HttpStatus.TOO_MANY_REQUESTS, "rate_limit_exceeded", "Too many requests", exception.getMessage());
     }
 
+    @ExceptionHandler(InvalidPaymentProofException.class)
+    ResponseEntity<ProblemDetail> handleInvalidPaymentProof(InvalidPaymentProofException exception) {
+        return problem(HttpStatus.UNPROCESSABLE_ENTITY, "invalid_payment_proof", "Invalid payment proof", exception.getMessage());
+    }
+
+    @ExceptionHandler(MalwareDetectedException.class)
+    ResponseEntity<ProblemDetail> handleMalwareDetected(MalwareDetectedException exception) {
+        return problem(HttpStatus.UNPROCESSABLE_ENTITY, "malware_detected", "Unsafe file", exception.getMessage());
+    }
+
+    @ExceptionHandler(FileScanUnavailableException.class)
+    ResponseEntity<ProblemDetail> handleFileScanUnavailable(FileScanUnavailableException exception) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "file_scan_unavailable", "File scan unavailable", exception.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ProblemDetail> handleInvalidRequest(MethodArgumentNotValidException exception) {
         Map<String, String> violations = new LinkedHashMap<>();
@@ -104,6 +123,12 @@ public class ApiExceptionHandler {
     @ExceptionHandler(NoResourceFoundException.class)
     ResponseEntity<ProblemDetail> handleNoRoute(NoResourceFoundException exception) {
         return problem(HttpStatus.NOT_FOUND, "route_not_found", "Route not found", "The requested route does not exist");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<ProblemDetail> handleUploadTooLarge(MaxUploadSizeExceededException exception) {
+        return problem(HttpStatus.PAYLOAD_TOO_LARGE, "payment_proof_too_large", "Payment proof too large",
+                "The payment proof must not exceed 15 MB");
     }
 
     @ExceptionHandler(Exception.class)

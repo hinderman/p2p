@@ -19,6 +19,8 @@ import com.project.backend.application.port.out.PasswordHashingPort;
 import com.project.backend.application.port.out.PaymentReadModelPort;
 import com.project.backend.application.port.out.PaymentAllocationValidationPort;
 import com.project.backend.application.port.out.RegistrationRateLimitPort;
+import com.project.backend.application.port.out.MalwareScannerPort;
+import com.project.backend.application.port.out.StoredObjectPort;
 import com.project.backend.application.port.out.SignInRateLimitPort;
 import com.project.backend.application.port.out.UnitOfWorkPort;
 import com.project.backend.application.port.out.UuidGeneratorPort;
@@ -55,6 +57,8 @@ class ApplicationCompositionConfigurationTest {
             .withBean(SignInRateLimitPort.class, () -> mock(SignInRateLimitPort.class))
             .withBean(RegistrationRateLimitPort.class, () -> mock(RegistrationRateLimitPort.class))
             .withBean(AccountVerificationPort.class, () -> mock(AccountVerificationPort.class))
+            .withBean(MalwareScannerPort.class, () -> mock(MalwareScannerPort.class))
+            .withBean(StoredObjectPort.class, () -> mock(StoredObjectPort.class))
             .withBean(CurrentAccountResolver.class)
             .withBean(AuthenticationController.class)
             .withBean(LoanController.class)

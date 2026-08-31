@@ -47,6 +47,7 @@ public class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/api/v1/loans/payer").hasRole("PAYER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/loans/*/payments/pending").hasRole("LENDER")
                         .requestMatchers(HttpMethod.POST, "/api/v1/loans/*/payments").hasRole("PAYER")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payment-proofs").hasRole("PAYER")
                         .requestMatchers(HttpMethod.POST, "/api/v1/payments/*/approval", "/api/v1/payments/*/rejection", "/api/v1/payments/*/reversal").hasRole("LENDER")
                         .anyRequest().denyAll())
                 .addFilterBefore(bearerAuthenticationFilter, AnonymousAuthenticationFilter.class)

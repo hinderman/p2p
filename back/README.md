@@ -253,6 +253,38 @@ The same key with the same submission returns the original payment identifier an
 status; reuse with different submission data returns `409 idempotency_conflict`.
 The key is stored with the payment and protected by a database unique constraint.
 
+### Payment proof uploads
+
+The payer must upload every proof before reporting the payment:
+
+```http
+POST /api/v1/payment-proofs
+Content-Type: multipart/form-data
+
+file=<PDF, PNG, or JPEG; maximum 15 MB>
+```
+
+The endpoint validates the file signature instead of trusting its extension or
+declared media type, computes SHA-256 on the server, writes the object to a
+non-public quarantine directory, and returns `201` only after the scanner marks
+it `SAFE`. A payment may reference a safe object only once, and only from the
+same payer account that uploaded it. The client must send the returned
+`storedObjectId` and `sha256`; callers cannot invent either value.
+
+Development stores files below `back/.data/payment-proofs` and uses the explicit
+`trusted-development` scanner. Production always uses the clamd `INSTREAM`
+protocol and fails closed when the scanner is unavailable. Configure:
+
+```text
+PAYMENT_PROOF_STORAGE_ROOT=/srv/project/payment-proofs
+CLAMAV_HOST=clamav
+CLAMAV_PORT=3310
+CLAMAV_TIMEOUT=PT10S
+```
+
+The storage root must be durable, private, and writable only by the backend
+process. It must not be served as a static directory.
+
 Reconcile journals operationally with:
 
 ```sql
