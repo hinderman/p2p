@@ -1,6 +1,6 @@
 package com.project.backend.infrastructure.persistence;
 
-import com.project.backend.application.dto.InvitationEmailMessage;
+import com.project.backend.application.dto.OutboundEmailMessage;
 import com.project.backend.application.dto.PageRequest;
 import com.project.backend.domain.financial.FinancialJournal;
 import com.project.backend.domain.financial.FinancialJournalType;
@@ -14,8 +14,8 @@ import com.project.backend.domain.valueobject.LoanInvitationId;
 import com.project.backend.domain.valueobject.Money;
 import com.project.backend.domain.valueobject.PersonId;
 import com.project.backend.domain.valueobject.ReportedPaymentId;
-import com.project.backend.infrastructure.notification.InvitationEmailPayloadCipher;
-import com.project.backend.infrastructure.notification.InvitationEmailProperties;
+import com.project.backend.infrastructure.notification.OutboundEmailPayloadCipher;
+import com.project.backend.infrastructure.notification.OutboundEmailProperties;
 import com.project.backend.infrastructure.persistence.financial.JdbcFinancialLedgerAdapter;
 import com.project.backend.infrastructure.persistence.outbox.JdbcOutboxEventsAdapter;
 import com.project.backend.infrastructure.persistence.query.JdbcLoanReadModelAdapter;
@@ -126,14 +126,14 @@ class PostgreSqlPersistenceIT {
 
     @Test
     void stores_an_encrypted_invitation_outbox_record_using_a_real_jsonb_and_timestamptz_column() {
-        InvitationEmailPayloadCipher cipher = new InvitationEmailPayloadCipher(invitationProperties());
+        OutboundEmailPayloadCipher cipher = new OutboundEmailPayloadCipher(invitationProperties());
         JdbcOutboxEventsAdapter adapter = new JdbcOutboxEventsAdapter(jdbc, cipher);
         UUID invitationId = UUID.randomUUID();
         String rawToken = "single-use-integration-token";
         String email = "payer@integration.test";
         Instant occurredAt = Instant.parse("2026-08-20T13:00:00Z");
 
-        adapter.enqueueInvitationEmail(new InvitationEmailMessage(
+        adapter.enqueueEmail(OutboundEmailMessage.loanInvitation(
                 new LoanInvitationId(invitationId), new EmailAddress(email), rawToken), occurredAt);
 
         String payload = jdbc.queryForObject(
@@ -141,8 +141,8 @@ class PostgreSqlPersistenceIT {
         assertNotNull(payload);
         assertFalse(payload.contains(rawToken));
         assertFalse(payload.contains(email));
-        InvitationEmailMessage decrypted = cipher.decrypt(payload);
-        assertEquals(invitationId, decrypted.invitationId().value());
+        OutboundEmailMessage decrypted = cipher.decrypt(payload);
+        assertEquals(invitationId, decrypted.referenceId());
         assertEquals(email, decrypted.recipientEmail().value());
         assertEquals(rawToken, decrypted.rawToken());
         Timestamp persistedAt = jdbc.queryForObject(
@@ -262,10 +262,10 @@ class PostgreSqlPersistenceIT {
         return paymentId;
     }
 
-    private static InvitationEmailProperties invitationProperties() {
-        return new InvitationEmailProperties(true, "no-reply@integration.test", "Project Integration Tests",
-                URI.create("http://localhost"), "/onboarding/payer", Duration.ofSeconds(1), 3,
-                Base64.getEncoder().encodeToString(new byte[32]));
+    private static OutboundEmailProperties invitationProperties() {
+        return new OutboundEmailProperties(true, "no-reply@integration.test", "Project Integration Tests",
+                URI.create("http://localhost"), "/onboarding/payer", "/registro/verificacion",
+                Duration.ofSeconds(1), 3, Base64.getEncoder().encodeToString(new byte[32]));
     }
 
     private static Money money(String amount) {

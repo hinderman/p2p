@@ -1,7 +1,8 @@
 package com.project.backend.infrastructure.notification;
 
 import com.project.backend.application.port.out.ClockPort;
-import com.project.backend.application.port.out.InvitationEmailDeliveryPort;
+import com.project.backend.application.port.out.OutboundEmailDeliveryPort;
+import com.project.backend.infrastructure.persistence.outbox.OutboundEmailOutboxEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -9,31 +10,31 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 import static com.project.backend.infrastructure.persistence.JdbcTime.timestamp;
 
-/** Delivers encrypted invitation messages from the transactional outbox at least once. */
+/** Delivers encrypted transactional messages from the outbox at least once. */
 @Component
-public final class InvitationEmailOutboxPublisher {
-    private static final Logger LOGGER = LoggerFactory.getLogger(InvitationEmailOutboxPublisher.class);
-    private static final String EVENT_TYPE = "LoanInvitationEmailRequested";
+public final class OutboundEmailOutboxPublisher {
+    private static final Logger LOGGER = LoggerFactory.getLogger(OutboundEmailOutboxPublisher.class);
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactions;
-    private final InvitationEmailPayloadCipher payloadCipher;
-    private final InvitationEmailDeliveryPort emailDelivery;
-    private final InvitationEmailProperties properties;
+    private final OutboundEmailPayloadCipher payloadCipher;
+    private final OutboundEmailDeliveryPort emailDelivery;
+    private final OutboundEmailProperties properties;
     private final ClockPort clock;
 
-    public InvitationEmailOutboxPublisher(
+    public OutboundEmailOutboxPublisher(
             JdbcTemplate jdbcTemplate,
             TransactionTemplate transactions,
-            InvitationEmailPayloadCipher payloadCipher,
-            InvitationEmailDeliveryPort emailDelivery,
-            InvitationEmailProperties properties,
+            OutboundEmailPayloadCipher payloadCipher,
+            OutboundEmailDeliveryPort emailDelivery,
+            OutboundEmailProperties properties,
             ClockPort clock) {
         this.jdbcTemplate = jdbcTemplate;
         this.transactions = transactions;
@@ -43,8 +44,8 @@ public final class InvitationEmailOutboxPublisher {
         this.clock = clock;
     }
 
-    @Scheduled(fixedDelayString = "${app.invitation.email.poll-delay:PT5S}")
-    public void publishPendingInvitations() {
+    @Scheduled(fixedDelayString = "${app.email.poll-delay:PT5S}")
+    public void publishPendingEmails() {
         if (!properties.enabled()) {
             return;
         }
@@ -54,16 +55,21 @@ public final class InvitationEmailOutboxPublisher {
     }
 
     private boolean publishOne() {
+        List<String> eventTypes = OutboundEmailOutboxEvent.allEventTypes();
+        String placeholders = String.join(",", Collections.nCopies(eventTypes.size(), "?"));
+        List<Object> arguments = new ArrayList<>(eventTypes);
+        arguments.add(properties.maxAttempts());
+
         List<OutboxRecord> records = jdbcTemplate.query("""
                 SELECT outbox_event_id, payload::text AS payload
                 FROM loans.outbox_events
-                WHERE event_type = ? AND published_at IS NULL AND attempts < ?
+                WHERE event_type IN (%s) AND published_at IS NULL AND attempts < ?
                 ORDER BY occurred_at, outbox_event_id
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
-                """, (resultSet, rowNumber) -> new OutboxRecord(
+                """.formatted(placeholders), (resultSet, rowNumber) -> new OutboxRecord(
                 resultSet.getObject("outbox_event_id", UUID.class), resultSet.getString("payload")),
-                EVENT_TYPE, properties.maxAttempts());
+                arguments.toArray());
         if (records.isEmpty()) {
             return false;
         }
@@ -82,7 +88,7 @@ public final class InvitationEmailOutboxPublisher {
                     SET attempts = attempts + 1, last_error = ?
                     WHERE outbox_event_id = ?
                     """, failureMessage(exception), record.id());
-            LOGGER.warn("Invitation email outbox event {} failed; it will be retried until the configured attempt limit", record.id());
+            LOGGER.warn("Outbound email event {} failed; it will be retried until the configured attempt limit", record.id());
             return false;
         }
     }

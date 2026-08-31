@@ -8,16 +8,12 @@ import com.project.backend.domain.valueobject.LoanId;
 import com.project.backend.domain.valueobject.LoanInvitationId;
 import com.project.backend.domain.valueobject.LoanTermId;
 import com.project.backend.domain.valueobject.UserAccountId;
+import com.project.backend.infrastructure.security.SingleUseToken;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Base64;
-import java.util.HexFormat;
 import java.util.UUID;
 import java.util.Optional;
 
@@ -27,7 +23,6 @@ import static com.project.backend.infrastructure.persistence.JdbcTime.instant;
 /** Persists a single-use invitation token; only its SHA-256 digest is retained. */
 @Component
 public final class JdbcLoanInvitationAdapter implements LoanInvitationPort {
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private final JdbcTemplate jdbcTemplate;
 
     public JdbcLoanInvitationAdapter(JdbcTemplate jdbcTemplate) {
@@ -39,7 +34,7 @@ public final class JdbcLoanInvitationAdapter implements LoanInvitationPort {
             LoanId loanId, LoanTermId loanTermId, EmailAddress recipient, Instant createdAt) {
         Instant now = java.util.Objects.requireNonNull(createdAt, "The invitation time is required");
         UUID invitationId = UUID.randomUUID();
-        String rawToken = randomToken();
+        String rawToken = SingleUseToken.generate();
         jdbcTemplate.update("UPDATE loans.loan_invitations SET status = 'REVOKED', revoked_at = ? WHERE loan_term_id = ? AND status = 'PENDING'",
                 timestamp(now), loanTermId.value());
         int inserted = jdbcTemplate.update("""
@@ -49,7 +44,7 @@ public final class JdbcLoanInvitationAdapter implements LoanInvitationPort {
                 SELECT ?, ?, ?, ?, 'PENDING', ?, ?, account.user_account_id
                 FROM loans.loans loan JOIN loans.user_accounts account ON account.person_id = loan.lender_person_id
                 WHERE loan.loan_id = ?
-                """, invitationId, loanTermId.value(), recipient.value(), sha256(rawToken),
+                """, invitationId, loanTermId.value(), recipient.value(), SingleUseToken.digest(rawToken),
                 timestamp(now.plus(7, ChronoUnit.DAYS)), timestamp(now), loanId.value());
         if (inserted != 1) {
             throw new IllegalStateException("The invitation could not be created for the loan");
@@ -72,7 +67,7 @@ public final class JdbcLoanInvitationAdapter implements LoanInvitationPort {
                 resultSet.getObject("loan_id", UUID.class),
                 resultSet.getString("normalized_email"),
                 resultSet.getString("status"),
-                instant(resultSet, "expires_at")), sha256(rawToken));
+                instant(resultSet, "expires_at")), SingleUseToken.digest(rawToken));
         if (invitations.isEmpty()) {
             return Optional.empty();
         }
@@ -112,21 +107,6 @@ public final class JdbcLoanInvitationAdapter implements LoanInvitationPort {
                 VALUES (?, ?, ?, 'PAYER', ?, CAST(? AS inet), ?, ?)
                 """, UUID.randomUUID(), invitation.loanTermId().value(), accountId.value(), invitation.invitationId().value(),
                 sourceIp, userAgent, timestamp(acceptedAt));
-    }
-
-    private static String randomToken() {
-        byte[] bytes = new byte[32];
-        SECURE_RANDOM.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    private static String sha256(String value) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(StandardCharsets.UTF_8)));
-        } catch (Exception exception) {
-            throw new IllegalStateException("SHA-256 is unavailable", exception);
-        }
     }
 
     private record InvitationRecord(

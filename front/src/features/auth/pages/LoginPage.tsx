@@ -166,6 +166,16 @@ export function LoginPage() {
                   'Ingresar'
                 )}
               </IonButton>
+
+              <IonButton
+                className="login-secondary"
+                disabled={isSubmitting}
+                expand="block"
+                fill="clear"
+                routerLink="/registro"
+              >
+                Crear una cuenta de prestamista
+              </IonButton>
       </form>
     </AccessLayout>
   );

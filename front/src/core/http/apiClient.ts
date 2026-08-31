@@ -129,7 +129,10 @@ async function executeRequest<T>(
 
   if (!response.ok) throw await apiErrorFromResponse(response);
 
-  if (response.status === 204) {
+  // A successful response that declares no JSON body has none to parse: 204 for a
+  // completed change, 202 for one the backend accepted and will finish later.
+  const declaresJsonBody = (response.headers.get('content-type') ?? '').includes('json');
+  if (response.status === 204 || !declaresJsonBody) {
     return undefined as T;
   }
 

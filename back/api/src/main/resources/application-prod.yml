@@ -16,15 +16,15 @@ spring:
       "mail.smtp.starttls.enable": ${MAIL_SMTP_STARTTLS_ENABLE:true}
 
 app:
-  invitation:
-    email:
-      from: ${INVITATION_EMAIL_FROM}
-      sender-name: ${INVITATION_EMAIL_SENDER_NAME}
-      public-base-url: ${INVITATION_PUBLIC_BASE_URL}
-      onboarding-path: ${INVITATION_ONBOARDING_PATH:/onboarding/payer}
-      poll-delay: ${INVITATION_EMAIL_POLL_DELAY:PT5S}
-      max-attempts: ${INVITATION_EMAIL_MAX_ATTEMPTS:10}
-      outbox-encryption-key: ${INVITATION_OUTBOX_ENCRYPTION_KEY}
+  email:
+    from: ${INVITATION_EMAIL_FROM}
+    sender-name: ${INVITATION_EMAIL_SENDER_NAME}
+    public-base-url: ${INVITATION_PUBLIC_BASE_URL}
+    onboarding-path: ${INVITATION_ONBOARDING_PATH:/onboarding/payer}
+    verification-path: ${ACCOUNT_VERIFICATION_PATH:/registro/verificacion}
+    poll-delay: ${INVITATION_EMAIL_POLL_DELAY:PT5S}
+    max-attempts: ${INVITATION_EMAIL_MAX_ATTEMPTS:10}
+    outbox-encryption-key: ${INVITATION_OUTBOX_ENCRYPTION_KEY}
 
 management:
   endpoint:

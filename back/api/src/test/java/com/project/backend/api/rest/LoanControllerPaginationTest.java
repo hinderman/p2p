@@ -1,16 +1,10 @@
 package com.project.backend.api.rest;
 
 import com.project.backend.api.exception.ApiExceptionHandler;
-import com.project.backend.application.command.CreateLoanCommand;
-import com.project.backend.application.dto.LoanCreated;
-import com.project.backend.application.dto.LoanSummary;
 import com.project.backend.application.dto.Page;
 import com.project.backend.application.dto.PageRequest;
 import com.project.backend.application.dto.PaymentSummary;
-import com.project.backend.application.port.in.command.CommandHandler;
-import com.project.backend.application.port.in.query.QueryHandler;
-import com.project.backend.application.query.ListLenderLoansQuery;
-import com.project.backend.application.query.ListPayerLoansQuery;
+import com.project.backend.application.port.in.ApplicationMediator;
 import com.project.backend.application.query.ListPendingPaymentsQuery;
 import com.project.backend.domain.payment.ReportedPaymentStatus;
 import com.project.backend.domain.valueobject.LoanId;
@@ -41,25 +35,19 @@ class LoanControllerPaginationTest {
     private static final UUID LOAN_ID = UUID.fromString("b0ebfe24-4094-452a-b6ec-40a2e368232e");
     private static final Principal LENDER = () -> UUID.randomUUID().toString();
 
-    @SuppressWarnings("unchecked")
-    private final QueryHandler<ListPendingPaymentsQuery, Page<PaymentSummary>> pendingPayments = mock(QueryHandler.class);
+    private final ApplicationMediator mediator = mock(ApplicationMediator.class);
 
     private MockMvc mockMvc() {
-        @SuppressWarnings("unchecked")
-        CommandHandler<CreateLoanCommand, LoanCreated> createLoan = mock(CommandHandler.class);
-        @SuppressWarnings("unchecked")
-        QueryHandler<ListLenderLoansQuery, List<LoanSummary>> lenderLoans = mock(QueryHandler.class);
-        @SuppressWarnings("unchecked")
-        QueryHandler<ListPayerLoansQuery, List<LoanSummary>> payerLoans = mock(QueryHandler.class);
         return MockMvcBuilders
-                .standaloneSetup(new LoanController(new CurrentAccountResolver(), createLoan, lenderLoans, payerLoans, pendingPayments))
+                .standaloneSetup(new LoanController(new CurrentAccountResolver(), mediator))
                 .setControllerAdvice(new ApiExceptionHandler())
                 .build();
     }
 
     @Test
     void forwards_the_requested_page_and_exposes_the_navigation_metadata() throws Exception {
-        when(pendingPayments.execute(any())).thenReturn(Page.of(List.of(payment()), new PageRequest(1, 5), 7));
+        when(mediator.query(any(ListPendingPaymentsQuery.class)))
+                .thenReturn(Page.of(List.of(payment()), new PageRequest(1, 5), 7));
 
         mockMvc().perform(get("/api/v1/loans/{loanId}/payments/pending", LOAN_ID)
                         .param("page", "1").param("size", "5").principal(LENDER))
@@ -72,20 +60,21 @@ class LoanControllerPaginationTest {
                 .andExpect(jsonPath("$.hasNext").value(false));
 
         ArgumentCaptor<ListPendingPaymentsQuery> query = ArgumentCaptor.forClass(ListPendingPaymentsQuery.class);
-        verify(pendingPayments).execute(query.capture());
+        verify(mediator).query(query.capture());
         assertEquals(new PageRequest(1, 5), query.getValue().page());
     }
 
     @Test
     void applies_the_default_page_when_no_parameter_is_sent() throws Exception {
-        when(pendingPayments.execute(any())).thenReturn(Page.empty(new PageRequest(0, PageRequest.DEFAULT_SIZE), 0));
+        when(mediator.query(any(ListPendingPaymentsQuery.class)))
+                .thenReturn(Page.empty(new PageRequest(0, PageRequest.DEFAULT_SIZE), 0));
 
         mockMvc().perform(get("/api/v1/loans/{loanId}/payments/pending", LOAN_ID).principal(LENDER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size").value(PageRequest.DEFAULT_SIZE));
 
         ArgumentCaptor<ListPendingPaymentsQuery> query = ArgumentCaptor.forClass(ListPendingPaymentsQuery.class);
-        verify(pendingPayments).execute(query.capture());
+        verify(mediator).query(query.capture());
         assertEquals(new PageRequest(0, PageRequest.DEFAULT_SIZE), query.getValue().page());
     }
 
@@ -99,7 +88,7 @@ class LoanControllerPaginationTest {
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value("malformed_request"));
         }
-        verifyNoInteractions(pendingPayments);
+        verifyNoInteractions(mediator);
     }
 
     /** A non-numeric parameter is a client defect: it must not surface as a 500. */
@@ -110,7 +99,7 @@ class LoanControllerPaginationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("malformed_request"));
 
-        verifyNoInteractions(pendingPayments);
+        verifyNoInteractions(mediator);
     }
 
     private static PaymentSummary payment() {

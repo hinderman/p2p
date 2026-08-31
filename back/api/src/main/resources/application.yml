@@ -83,18 +83,20 @@ springdoc:
     enabled: false
 
 app:
-  invitation:
-    email:
-      enabled: ${INVITATION_EMAIL_ENABLED:true}
-      from: ${INVITATION_EMAIL_FROM:no-reply@project.local}
-      sender-name: ${INVITATION_EMAIL_SENDER_NAME:Project}
-      # The token is in the URL fragment, so it is not sent to frontend-server logs or referrers.
-      public-base-url: ${INVITATION_PUBLIC_BASE_URL:http://localhost:5173}
-      onboarding-path: ${INVITATION_ONBOARDING_PATH:/onboarding/payer}
-      poll-delay: ${INVITATION_EMAIL_POLL_DELAY:PT5S}
-      max-attempts: ${INVITATION_EMAIL_MAX_ATTEMPTS:10}
-      # Required: Base64-encoded, randomly generated 32-byte AES-256 key.
-      outbox-encryption-key: ${INVITATION_OUTBOX_ENCRYPTION_KEY:}
+  # Transactional email: loan invitations, account verification, and the notice
+  # sent when someone registers an address that already has an account.
+  email:
+    enabled: ${INVITATION_EMAIL_ENABLED:true}
+    from: ${INVITATION_EMAIL_FROM:no-reply@project.local}
+    sender-name: ${INVITATION_EMAIL_SENDER_NAME:Project}
+    # Tokens travel in the URL fragment, so they are not sent to frontend-server logs or referrers.
+    public-base-url: ${INVITATION_PUBLIC_BASE_URL:http://localhost:5173}
+    onboarding-path: ${INVITATION_ONBOARDING_PATH:/onboarding/payer}
+    verification-path: ${ACCOUNT_VERIFICATION_PATH:/registro/verificacion}
+    poll-delay: ${INVITATION_EMAIL_POLL_DELAY:PT5S}
+    max-attempts: ${INVITATION_EMAIL_MAX_ATTEMPTS:10}
+    # Required: Base64-encoded, randomly generated 32-byte AES-256 key.
+    outbox-encryption-key: ${INVITATION_OUTBOX_ENCRYPTION_KEY:}
 
 security:
   authentication:
@@ -108,3 +110,11 @@ security:
       window: ${AUTH_RATE_LIMIT_WINDOW:PT15M}
       max-failures-per-email: ${AUTH_RATE_LIMIT_EMAIL_FAILURES:5}
       max-failures-per-ip: ${AUTH_RATE_LIMIT_IP_FAILURES:20}
+
+  registration:
+    # Registration cannot report failure without revealing who holds an account,
+    # so every attempt counts, and the window is wider than the sign-in one.
+    rate-limit:
+      window: ${REGISTRATION_RATE_LIMIT_WINDOW:PT1H}
+      max-attempts-per-email: ${REGISTRATION_RATE_LIMIT_EMAIL_ATTEMPTS:5}
+      max-attempts-per-ip: ${REGISTRATION_RATE_LIMIT_IP_ATTEMPTS:20}

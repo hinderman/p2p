@@ -1,6 +1,6 @@
 # Flyway migration location
 
-The PostgreSQL base schema is provisioned database-first through the idempotent scripts in `C:\Proyect\.database`. Flyway baselines that existing schema at version `0` and applies the additive migrations in this directory at application startup.
+The PostgreSQL base schema is provisioned database-first through the idempotent scripts in `C:MyProjects\.database`. Flyway baselines that existing schema at version `0` and applies the additive migrations in this directory at application startup.
 
 Hibernate uses `ddl-auto: validate`; it validates mappings but never creates or changes the schema. Do not add the initial schema to this directory or enable generated DDL.
 
