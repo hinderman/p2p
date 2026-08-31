@@ -45,6 +45,7 @@ public class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/v1/loans").hasRole("LENDER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/loans/lender").hasRole("LENDER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/loans/payer").hasRole("PAYER")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/loans/*").hasAnyRole("LENDER", "PAYER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/loans/*/payments/pending").hasRole("LENDER")
                         .requestMatchers(HttpMethod.POST, "/api/v1/loans/*/payments").hasRole("PAYER")
                         .requestMatchers(HttpMethod.POST, "/api/v1/payment-proofs").hasRole("PAYER")

@@ -20,9 +20,17 @@ public final class ApplicationAuthorizer {
     }
 
     public UserAccount requireActiveAccountWithRole(UserAccountId accountId, UserRole role) {
+        UserAccount account = requireActiveAccount(accountId);
+        if (!account.hasRole(role)) {
+            throw new AccessDeniedException("The account is not authorized to perform this operation");
+        }
+        return account;
+    }
+
+    public UserAccount requireActiveAccount(UserAccountId accountId) {
         UserAccount account = accounts.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("La account no exists"));
-        if (account.status() != UserAccountStatus.ACTIVE || !account.hasRole(role)) {
+        if (account.status() != UserAccountStatus.ACTIVE) {
             throw new AccessDeniedException("The account is not authorized to perform this operation");
         }
         return account;

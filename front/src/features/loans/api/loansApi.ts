@@ -1,5 +1,5 @@
 import { apiClient, ApiError } from '../../../core/http/apiClient';
-import type { CreatedLoan, CreateLoanInput, LoanScope, LoanSummary, Money } from '../model/loan.types';
+import type { CreatedLoan, CreateLoanInput, InstallmentDetail, LoanDetail, LoanScope, LoanSummary, Money } from '../model/loan.types';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -61,6 +61,48 @@ function parseCreatedLoan(value: unknown): CreatedLoan {
   return { loanId: value.loanId, status: value.status };
 }
 
+function parseInstallment(value: unknown): InstallmentDetail | null {
+  if (!isRecord(value) || typeof value.installmentId !== 'string' || typeof value.number !== 'number' ||
+      !Number.isInteger(value.number) || typeof value.dueDate !== 'string') return null;
+  const moneyFields = ['agreedPrincipal', 'agreedInterest', 'agreedFee', 'agreedTotal', 'paidPrincipal',
+    'paidInterest', 'paidFee', 'paidTotal', 'outstandingPrincipal', 'outstandingInterest',
+    'outstandingFee', 'outstandingTotal'] as const;
+  const parsed = Object.fromEntries(moneyFields.map((field) => [field, parseMoney(value[field])]));
+  if (moneyFields.some((field) => parsed[field] === null)) return null;
+  return { installmentId: value.installmentId, number: value.number, dueDate: value.dueDate,
+    ...parsed } as InstallmentDetail;
+}
+
+function parseLoanDetail(value: unknown): LoanDetail {
+  const summary = parseLoanSummary(value);
+  if (!summary || !isRecord(value) || !isRecord(value.terms)) {
+    throw new ApiError(200, 'invalid_response', 'The server returned an invalid loan detail');
+  }
+  const terms = value.terms;
+  if (typeof terms.versionNumber !== 'number' || typeof terms.interestRatePercentage !== 'string' ||
+      typeof terms.ratePeriod !== 'string' || typeof terms.interestCalculationMethod !== 'string' ||
+      typeof terms.dayCountBasis !== 'string' || typeof terms.amortizationMethod !== 'string' ||
+      typeof terms.capitalPrepaymentPolicy !== 'string' || typeof terms.installmentCount !== 'number' ||
+      typeof terms.firstDueDate !== 'string' || typeof terms.timeZone !== 'string') {
+    throw new ApiError(200, 'invalid_response', 'The server returned invalid loan terms');
+  }
+  let paymentPlan: LoanDetail['paymentPlan'] = null;
+  if (value.paymentPlan !== null) {
+    const plan = value.paymentPlan;
+    if (!isRecord(plan) || typeof plan.paymentPlanId !== 'string' || typeof plan.versionNumber !== 'number' ||
+        typeof plan.reason !== 'string' || typeof plan.status !== 'string' || !Array.isArray(plan.installments)) {
+      throw new ApiError(200, 'invalid_response', 'The server returned an invalid payment plan');
+    }
+    const installments = plan.installments.map(parseInstallment);
+    if (installments.some((installment) => installment === null)) {
+      throw new ApiError(200, 'invalid_response', 'The server returned invalid installments');
+    }
+    paymentPlan = { paymentPlanId: plan.paymentPlanId, versionNumber: plan.versionNumber,
+      reason: plan.reason, status: plan.status, installments: installments as InstallmentDetail[] };
+  }
+  return { ...summary, terms: terms as LoanDetail['terms'], paymentPlan };
+}
+
 export async function listLoans(scope: LoanScope, signal?: AbortSignal): Promise<LoanSummary[]> {
   const response = await apiClient<unknown>(`/api/v1/loans/${scope}`, {
     globalError: false,
@@ -68,6 +110,15 @@ export async function listLoans(scope: LoanScope, signal?: AbortSignal): Promise
     signal,
   });
   return parseLoanList(response);
+}
+
+export async function getLoanDetail(loanId: string, signal?: AbortSignal): Promise<LoanDetail> {
+  const response = await apiClient<unknown>(`/api/v1/loans/${encodeURIComponent(loanId)}`, {
+    globalError: false,
+    globalLoading: false,
+    signal,
+  });
+  return parseLoanDetail(response);
 }
 
 export async function createLoan(input: CreateLoanInput): Promise<CreatedLoan> {

@@ -2,6 +2,7 @@ package com.project.backend.api.rest;
 
 import com.project.backend.api.dto.request.CreateLoanRequest;
 import com.project.backend.api.dto.response.LoanResponse;
+import com.project.backend.api.dto.response.LoanDetailResponse;
 import com.project.backend.api.dto.response.LoanSummaryResponse;
 import com.project.backend.api.dto.response.PageResponse;
 import com.project.backend.api.dto.response.PaymentSummaryResponse;
@@ -11,6 +12,7 @@ import com.project.backend.application.dto.LoanCreated;
 import com.project.backend.application.dto.PageRequest;
 import com.project.backend.application.port.in.ApplicationMediator;
 import com.project.backend.application.query.ListLenderLoansQuery;
+import com.project.backend.application.query.GetLoanDetailQuery;
 import com.project.backend.application.query.ListPayerLoansQuery;
 import com.project.backend.application.query.ListPendingPaymentsQuery;
 import com.project.backend.domain.valueobject.LoanId;
@@ -69,6 +71,14 @@ public class LoanController {
     @Operation(summary = "List loans for the authenticated payer")
     public List<LoanSummaryResponse> listForPayer(Principal principal) {
         return ApiMapper.responsesForLoans(mediator.query(new ListPayerLoansQuery(currentAccount.requireAccountId(principal))));
+    }
+
+    @GetMapping(path = "/{loanId}")
+    @Operation(summary = "Get loan details and the current payment plan",
+            description = "Only an active account participating in the loan can access its contractual detail.")
+    public LoanDetailResponse detail(@PathVariable UUID loanId, Principal principal) {
+        return ApiMapper.response(mediator.query(new GetLoanDetailQuery(
+                currentAccount.requireAccountId(principal), new LoanId(loanId))));
     }
 
     @GetMapping(path = "/{loanId}/payments/pending")
